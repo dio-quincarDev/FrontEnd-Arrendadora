@@ -1,30 +1,28 @@
-import { defineRouter } from '#q-app/wrappers'
-import { createRouter, createMemoryHistory, createWebHistory, createWebHashHistory } from 'vue-router'
+// src/router/index.js
+import { route } from 'quasar/wrappers'
+import {
+  createRouter,
+  createWebHistory,
+  createMemoryHistory,
+  createWebHashHistory,
+} from 'vue-router'
 import routes from './routes'
+// import { authGuard } from './guards' // opcional
 
-/*
- * If not building with SSR mode, you can
- * directly export the Router instantiation;
- *
- * The function below can be async too; either use
- * async/await or return a Promise which resolves
- * with the Router instance.
- */
-
-export default defineRouter(function (/* { store, ssrContext } */) {
+export default route(function () {
   const createHistory = process.env.SERVER
     ? createMemoryHistory
-    : (process.env.VUE_ROUTER_MODE === 'history' ? createWebHistory : createWebHashHistory)
+    : process.env.VUE_ROUTER_MODE === 'history'
+      ? createWebHistory
+      : createWebHashHistory
 
-  const Router = createRouter({
-    scrollBehavior: () => ({ left: 0, top: 0 }),
+  const router = createRouter({
+    history: createHistory(process.env.VUE_ROUTER_BASE),
     routes,
-
-    // Leave this as is and make changes in quasar.conf.js instead!
-    // quasar.conf.js -> build -> vueRouterMode
-    // quasar.conf.js -> build -> publicPath
-    history: createHistory(process.env.VUE_ROUTER_BASE)
+    scrollBehavior: () => ({ left: 0, top: 0 }),
   })
 
-  return Router
+  // router.beforeEach(authGuard) // si luego usas guards
+
+  return router
 })

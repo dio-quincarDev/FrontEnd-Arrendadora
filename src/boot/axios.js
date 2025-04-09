@@ -1,24 +1,79 @@
-import { defineBoot } from '#q-app/wrappers'
+// src/boot/axios.js
+import { boot } from 'quasar/wrappers'
 import axios from 'axios'
 
-// Be careful when using SSR for cross-request state pollution
-// due to creating a Singleton instance here;
-// If any client changes this (global) instance, it might be a
-// good idea to move this instance creation inside of the
-// "export default () => {}" function below (which runs individually
-// for each client)
-const api = axios.create({ baseURL: 'https://api.example.com' })
+// Constantes para rutas de la API
+const API_CONSTANTS = {
+  BASE_URL: 'http://localhost:8080', // URL base del backend
+  V1_ROUTE: '/v1',
+  AUTH_ROUTE: '/auth',
+  CUSTOMERS_ROUTE: '/customers',
+  VEHICLES_ROUTE: '/vehicles',
+  REPORTS_ROUTE: '/reports',
+  LOGIN_ROUTE: '/login',
+}
 
-export default defineBoot(({ app }) => {
-  // for use inside Vue files (Options API) through this.$axios and this.$api
+let routerInstance // Instancia del router para manejar redirecciones
 
-  app.config.globalProperties.$axios = axios
-  // ^ ^ ^ this will allow you to use this.$axios (for Vue Options API form)
-  //       so you won't necessarily have to import axios in each vue file
-
-  app.config.globalProperties.$api = api
-  // ^ ^ ^ this will allow you to use this.$api (for Vue Options API form)
-  //       so you can easily perform requests against your app's API
+// Configuración base de Axios
+const api = axios.create({
+  baseURL: API_CONSTANTS.BASE_URL,
+  withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json',
+    Accept: 'application/json',
+  },
 })
 
-export { api }
+// Función para verificar si el token es válido (puedes adaptarla según tus necesidades)
+function isValidToken(token) {
+  // Ejemplo: verificar la expiración del token si el backend lo permite
+  return !!token // Por ahora, asumimos que cualquier token no nulo es válido
+}
+
+// Interceptor para añadir el token JWT a cada solicitud
+api.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('jwtToken')
+    if (token && isValidToken(token)) {
+      config.headers.Authorization = `Bearer ${token}`
+    }
+    return config
+  },
+  (error) => Promise.reject(error),
+)
+
+// Interceptor para manejar errores globales
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      handleUnauthorized()
+    } else if (error.response?.status === 403) {
+      console.error('Acceso denegado: permisos insuficientes.')
+    } else if (error.response) {
+      console.error(`Error ${error.response.status}: ${error.response.statusText}`)
+    } else {
+      console.error('Error en la solicitud:', error.message)
+    }
+    return Promise.reject(error)
+  },
+)
+
+// Función para manejar redirecciones en caso de error 401
+function handleUnauthorized() {
+  if (routerInstance) {
+    routerInstance.push(`${API_CONSTANTS.AUTH_ROUTE}${API_CONSTANTS.LOGIN_ROUTE}`)
+  } else {
+    console.error('Router instance not initialized in interceptor.')
+    window.location.href = `${API_CONSTANTS.AUTH_ROUTE}${API_CONSTANTS.LOGIN_ROUTE}` // Fallback
+  }
+}
+
+export default boot(({ app, router }) => {
+  app.config.globalProperties.$axios = axios
+  app.config.globalProperties.$api = api
+  routerInstance = router // Guarda la instancia del router
+})
+
+export { api, API_CONSTANTS }

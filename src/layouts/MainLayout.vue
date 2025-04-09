@@ -1,44 +1,40 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <q-header elevated>
+    <!-- HEADER -->
+    <q-header elevated class="bg-primary text-white">
       <q-toolbar>
-        <q-btn
-          flat
-          dense
-          round
-          icon="menu"
-          aria-label="Menu"
-          @click="toggleLeftDrawer"
-        />
+        <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
+        <q-toolbar-title> Car Rent Admin </q-toolbar-title>
 
-        <q-toolbar-title>
-          Quasar App
-        </q-toolbar-title>
-
-        <div>Quasar v{{ $q.version }}</div>
+        <q-btn flat label="Cerrar sesión" icon="logout" @click="logout" />
       </q-toolbar>
     </q-header>
 
-    <q-drawer
-      v-model="leftDrawerOpen"
-      show-if-above
-      bordered
-    >
+    <!-- DRAWER / MENU LATERAL -->
+    <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-list>
-        <q-item-label
-          header
-        >
-          Essential Links
-        </q-item-label>
+        <q-item-label header> Menú </q-item-label>
 
-        <EssentialLink
-          v-for="link in linksList"
-          :key="link.title"
-          v-bind="link"
-        />
+        <q-item to="/" clickable v-ripple exact>
+          <q-item-section avatar><q-icon name="home" /></q-item-section>
+          <q-item-section>Inicio</q-item-section>
+        </q-item>
+
+        <q-item to="/customers" clickable v-ripple>
+          <q-item-section avatar><q-icon name="people" /></q-item-section>
+          <q-item-section>Clientes</q-item-section>
+        </q-item>
+
+        <q-item to="/vehicles" clickable v-ripple>
+          <q-item-section avatar><q-icon name="directions_car" /></q-item-section>
+          <q-item-section>Vehículos</q-item-section>
+        </q-item>
+
+        <!-- Agrega más rutas si es necesario -->
       </q-list>
     </q-drawer>
 
+    <!-- CONTENIDO -->
     <q-page-container>
       <router-view />
     </q-page-container>
@@ -47,56 +43,21 @@
 
 <script setup>
 import { ref } from 'vue'
-import EssentialLink from 'components/EssentialLink.vue'
-
-const linksList = [
-  {
-    title: 'Docs',
-    caption: 'quasar.dev',
-    icon: 'school',
-    link: 'https://quasar.dev'
-  },
-  {
-    title: 'Github',
-    caption: 'github.com/quasarframework',
-    icon: 'code',
-    link: 'https://github.com/quasarframework'
-  },
-  {
-    title: 'Discord Chat Channel',
-    caption: 'chat.quasar.dev',
-    icon: 'chat',
-    link: 'https://chat.quasar.dev'
-  },
-  {
-    title: 'Forum',
-    caption: 'forum.quasar.dev',
-    icon: 'record_voice_over',
-    link: 'https://forum.quasar.dev'
-  },
-  {
-    title: 'Twitter',
-    caption: '@quasarframework',
-    icon: 'rss_feed',
-    link: 'https://twitter.quasar.dev'
-  },
-  {
-    title: 'Facebook',
-    caption: '@QuasarFramework',
-    icon: 'public',
-    link: 'https://facebook.quasar.dev'
-  },
-  {
-    title: 'Quasar Awesome',
-    caption: 'Community Quasar projects',
-    icon: 'favorite',
-    link: 'https://awesome.quasar.dev'
-  }
-]
+import { useRouter } from 'vue-router'
 
 const leftDrawerOpen = ref(false)
+const router = useRouter()
 
-function toggleLeftDrawer () {
+function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
+
+function logout() {
+  localStorage.removeItem('authToken')
+  router.push('/auth/login')
+}
 </script>
+
+<style scoped>
+/* Puedes personalizar colores o estilos adicionales aquí */
+</style>
