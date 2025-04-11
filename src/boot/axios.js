@@ -34,7 +34,7 @@ function isValidToken(token) {
 // Interceptor para añadir el token JWT a cada solicitud
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('jwtToken')
+    const token = localStorage.getItem('authToken')
     if (token && isValidToken(token)) {
       config.headers.Authorization = `Bearer ${token}`
     }

@@ -1,5 +1,10 @@
-// src/services/vehicle.service.js
-import { api, API_CONSTANTS } from 'src/boot/axios'
+import { api } from 'src/boot/axios'
+
+// Importamos las constantes directamente para este servicio
+const API_CONSTANTS = {
+  V1_ROUTE: '/v1',
+  VEHICLES_ROUTE: '/vehicles',
+}
 
 export default {
   // Crear un vehículo
@@ -9,10 +14,10 @@ export default {
         `${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.VEHICLES_ROUTE}`,
         vehicle,
       )
-      return response.data // Retorna el vehículo creado
+      return response.data
     } catch (error) {
       console.error('Error creando vehículo:', error)
-      throw error // Lanza el error para manejo en el componente
+      throw error
     }
   },
 
@@ -20,7 +25,8 @@ export default {
   async getVehicles() {
     try {
       const response = await api.get(`${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.VEHICLES_ROUTE}`)
-      return response.data // Retorna la lista de vehículos
+      console.log('Datos recibidos en el servicio:', response.data)
+      return response.data
     } catch (error) {
       console.error('Error obteniendo vehículos:', error)
       throw error

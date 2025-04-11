@@ -16,6 +16,7 @@
 
 <script>
 import CustomerService from 'src/services/customer.service'
+import { jwtDecode } from 'jwt-decode' // Asegúrate de instalar esta dependencia
 
 export default {
   name: 'CustomerForm',
@@ -30,10 +31,25 @@ export default {
       isEditMode: false,
     }
   },
+  computed: {
+    isAdmin() {
+      const token = localStorage.getItem('jwtToken')
+      if (token) {
+        try {
+          const decodedToken = jwtDecode(token)
+          return decodedToken.roles && decodedToken.roles.includes('ROLE_ADMIN') // Ajusta la clave del rol si es diferente
+        } catch (error) {
+          console.error('Error al decodificar el token:', error)
+          return false
+        }
+      }
+      return false
+    },
+  },
   async created() {
     if (this.$route.params.id) {
       this.isEditMode = true
-      await this.loadCustomer() // Modularización del manejo de datos
+      await this.loadCustomer()
     }
   },
   methods: {
@@ -56,11 +72,9 @@ export default {
         }
 
         if (this.isEditMode) {
-          // Actualizar cliente existente
           await CustomerService.updateCustomer(this.$route.params.id, formattedCustomer)
           this.$q.notify({ type: 'positive', message: 'Cliente actualizado correctamente' })
         } else {
-          // Crear nuevo cliente
           await CustomerService.createCustomer(formattedCustomer)
           this.$q.notify({ type: 'positive', message: 'Cliente creado correctamente' })
         }
