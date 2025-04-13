@@ -34,7 +34,6 @@ export default {
     return {
       vehicles: [],
       columns: [
-        { name: 'id', label: 'ID', field: 'id', align: 'left' },
         { name: 'brand', label: 'Marca', field: 'brand', align: 'left' },
         { name: 'model', label: 'Modelo', field: 'model', align: 'left' },
         { name: 'year', label: 'Año', field: 'year', align: 'left' },

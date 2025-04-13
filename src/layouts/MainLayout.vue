@@ -4,7 +4,7 @@
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
-        <q-toolbar-title> Car Rent Admin </q-toolbar-title>
+        <q-toolbar-title> Arrendadora Alberto Junior </q-toolbar-title>
 
         <q-btn flat label="Cerrar sesión" icon="logout" @click="logout" />
       </q-toolbar>
@@ -28,6 +28,11 @@
         <q-item to="/vehicles" clickable v-ripple>
           <q-item-section avatar><q-icon name="directions_car" /></q-item-section>
           <q-item-section>Vehículos</q-item-section>
+        </q-item>
+
+        <q-item to="/rentals" clickable v-ripple>
+          <q-item-section avatar><q-icon name="directions_car" /></q-item-section>
+          <q-item-section>Rentas</q-item-section>
         </q-item>
 
         <!-- Agrega más rutas si es necesario -->

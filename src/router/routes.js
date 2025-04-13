@@ -11,6 +11,10 @@ import VehicleDetailsPage from 'pages/vehicle/VehicleDetailsPage.vue'
 import VehicleEditPage from 'pages/vehicle/VehicleEditPage.vue'
 import LoginPage from 'pages/auth/LoginPage.vue'
 import RegisterPage from 'pages/auth/RegisterPage.vue'
+import RentalListPage from 'pages/rental/RentalListPage.vue'
+import RentalCreatePage from 'pages/rental/RentalCreatePage.vue'
+import RentalDetailsPage from 'pages/rental/RentalDetailsPage.vue'
+import RentalEditPage from 'pages/rental/RentalEditPage.vue'
 import ErrorNotFound from 'pages/ErrorNotFound.vue'
 import MainLayout from 'layouts/MainLayout.vue'
 import AuthLayout from 'layouts/AuthLayout.vue'
@@ -41,6 +45,14 @@ const vehicleRoutes = [
   { path: 'vehicles/edit/:id', component: VehicleEditPage, props: true },
 ]
 
+// Subrutas para rentas
+const rentalRoutes = [
+  { path: 'rentals', component: RentalListPage },
+  { path: 'rentals/create', component: RentalCreatePage },
+  { path: 'rentals/:id', component: RentalDetailsPage, props: true },
+  { path: 'rentals/edit/:id', component: RentalEditPage, props: true },
+]
+
 // Rutas principales
 export default [
   authRoutes,
@@ -51,7 +63,8 @@ export default [
     children: [
       { path: '', component: HomePage },
       ...customerRoutes, // Agregar rutas de clientes
-      ...vehicleRoutes, // Agregar rutas de vehículos
+      ...vehicleRoutes, // Agregar ruta de vehiculos
+      ...rentalRoutes, // Agregar rutas de rentas
     ],
   },
   {

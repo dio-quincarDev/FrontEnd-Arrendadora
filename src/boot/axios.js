@@ -11,6 +11,7 @@ const API_CONSTANTS = {
   VEHICLES_ROUTE: '/vehicles',
   REPORTS_ROUTE: '/reports',
   LOGIN_ROUTE: '/login',
+  RENTAL_ROUTE: '/rentals',
 }
 
 let routerInstance // Instancia del router para manejar redirecciones
