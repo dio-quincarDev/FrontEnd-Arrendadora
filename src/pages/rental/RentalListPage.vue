@@ -1,20 +1,17 @@
 <template>
-  <div class="q-pa-md">
-    <q-btn
-      label="Nueva Renta"
-      color="primary"
-      @click="$router.push('/rentals/create')"
-      class="q-mb-md"
-    />
-    <rental-table />
-  </div>
+  <q-page padding>
+    <div class="q-pa-md">
+      <div class="text-h4 q-mb-md">Gestión de Alquileres</div>
+      <rental-table />
+    </div>
+  </q-page>
 </template>
 
 <script>
-import RentalTable from 'src/components/rental/RentalTable.vue'
+import RentalTable from 'components/rental/RentalTable.vue'
 
 export default {
-  name: 'RentalListPage',
+  name: 'RentalList',
   components: {
     RentalTable,
   },

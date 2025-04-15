@@ -1,17 +1,40 @@
 <template>
-  <div>
-    <h1>Detalles de la Renta #{{ $route.params.id }}</h1>
-    <rental-details :rentalId="$route.params.id" />
-  </div>
+  <q-page padding>
+    <div class="q-pa-md">
+      <div class="row items-center q-mb-md">
+        <q-btn
+          flat
+          round
+          color="primary"
+          icon="arrow_back"
+          @click="$router.push('/rentals')"
+          class="q-mr-sm"
+        />
+        <div class="text-h4">Detalles del Alquiler</div>
+      </div>
+      <rental-details :rentalId="rentalId" />
+    </div>
+  </q-page>
 </template>
 
 <script>
-import RentalDetails from 'src/components/rental/RentalDetails.vue'
+import RentalDetails from 'components/rental/RentalDetails.vue'
 
 export default {
-  name: 'RentalDetailsPage',
+  name: 'RentalView',
   components: {
     RentalDetails,
+  },
+  props: {
+    id: {
+      type: [String, Number],
+      required: true,
+    },
+  },
+  computed: {
+    rentalId() {
+      return this.id
+    },
   },
 }
 </script>

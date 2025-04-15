@@ -3,13 +3,14 @@ import { api, API_CONSTANTS } from 'src/boot/axios'
 
 export default {
   // Crear una nueva renta
-  async createRental(rental) {
+  createRental(rental) {
+    // Elimina el async aquí para devolver la promesa directamente
     try {
-      const response = await api.post(
+      return api.post(
+        // Devuelve la promesa
         `${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.RENTAL_ROUTE}`,
         rental,
       )
-      return response.data
     } catch (error) {
       console.error('Error creando renta:', error)
       throw error
@@ -17,10 +18,10 @@ export default {
   },
 
   // Obtener todas las rentas
-  async getRentals() {
+  getRentals() {
+    // Elimina el async aquí para devolver la promesa directamente
     try {
-      const response = await api.get(`${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.RENTAL_ROUTE}`)
-      return response.data
+      return api.get(`${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.RENTAL_ROUTE}`) // Devuelve la promesa
     } catch (error) {
       console.error('Error obteniendo rentas:', error)
       throw error
@@ -28,10 +29,10 @@ export default {
   },
 
   // Obtener una renta por ID
-  async getRentalById(id) {
+  getRentalById(id) {
+    // Elimina el async aquí para devolver la promesa directamente
     try {
-      const response = await api.get(`${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.RENTAL_ROUTE}/${id}`)
-      return response.data
+      return api.get(`${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.RENTAL_ROUTE}/${id}`) // Devuelve la promesa
     } catch (error) {
       console.error(`Error obteniendo renta con ID ${id}:`, error)
       throw error
@@ -39,13 +40,14 @@ export default {
   },
 
   // Actualizar una renta
-  async updateRental(id, rental) {
+  updateRental(id, rental) {
+    // Elimina el async aquí para devolver la promesa directamente
     try {
-      const response = await api.put(
+      return api.put(
+        // Devuelve la promesa
         `${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.RENTAL_ROUTE}/${id}`,
         rental,
       )
-      return response.data
     } catch (error) {
       console.error(`Error actualizando renta con ID ${id}:`, error)
       throw error
@@ -53,12 +55,13 @@ export default {
   },
 
   // Cancelar una renta
-  async cancelRental(id) {
+  cancelRental(id) {
+    // Elimina el async aquí para devolver la promesa directamente
     try {
-      const response = await api.put(
+      return api.put(
+        // Devuelve la promesa
         `${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.RENTAL_ROUTE}/${id}/cancel`,
       )
-      return response.data
     } catch (error) {
       console.error(`Error cancelando renta con ID ${id}:`, error)
       throw error
@@ -66,12 +69,13 @@ export default {
   },
 
   // Eliminar una renta
-  async deleteRental(id) {
+  deleteRental(id) {
+    // Elimina el async aquí para devolver la promesa directamente
     try {
-      const response = await api.delete(
+      return api.delete(
+        // Devuelve la promesa
         `${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.RENTAL_ROUTE}/${id}`,
       )
-      return response.data
     } catch (error) {
       console.error(`Error eliminando renta con ID ${id}:`, error)
       throw error

@@ -31,7 +31,7 @@
         </q-item>
 
         <q-item to="/rentals" clickable v-ripple>
-          <q-item-section avatar><q-icon name="directions_car" /></q-item-section>
+          <q-item-section avatar><q-icon name="key" /></q-item-section>
           <q-item-section>Rentas</q-item-section>
         </q-item>
 

@@ -1,17 +1,40 @@
 <template>
-  <div>
-    <h1>Editar Renta #{{ $route.params.id }}</h1>
-    <rental-form :rentalId="$route.params.id" />
-  </div>
+  <q-page padding>
+    <div class="q-pa-md">
+      <div class="row items-center q-mb-md">
+        <q-btn
+          flat
+          round
+          color="primary"
+          icon="arrow_back"
+          @click="$router.push('/rentals')"
+          class="q-mr-sm"
+        />
+        <div class="text-h4">Editar Alquiler</div>
+      </div>
+      <rental-form :rentalId="rentalId" />
+    </div>
+  </q-page>
 </template>
 
 <script>
-import RentalForm from 'src/components/rental/RentalForm.vue'
+import RentalForm from 'components/rental/RentalForm.vue'
 
 export default {
-  name: 'RentalEditPage',
+  name: 'RentalEdit',
   components: {
     RentalForm,
+  },
+  props: {
+    id: {
+      type: [String, Number],
+      required: true,
+    },
+  },
+  computed: {
+    rentalId() {
+      return this.id
+    },
   },
 }
 </script>

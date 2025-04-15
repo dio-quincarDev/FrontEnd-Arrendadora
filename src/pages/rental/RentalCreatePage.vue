@@ -1,22 +1,19 @@
 <template>
-  <div>
-    <h1>Crear Nueva Renta</h1>
-    <rental-form @rental-created="onRentalCreated" />
-  </div>
+  <q-page padding>
+    <div class="q-pa-md">
+      <div class="text-h4 q-mb-md">Gestión de Alquileres</div>
+      <rental-table />
+    </div>
+  </q-page>
 </template>
 
 <script>
-import RentalForm from 'src/components/rental/RentalForm.vue'
+import RentalTable from 'components/rental/RentalTable.vue'
 
 export default {
-  name: 'RentalCreatePage',
+  name: 'RentalList',
   components: {
-    RentalForm,
-  },
-  methods: {
-    onRentalCreated() {
-      this.$router.push('/rentals')
-    },
+    RentalTable,
   },
 }
 </script>
