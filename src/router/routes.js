@@ -18,6 +18,7 @@ import RentalEditPage from 'pages/rental/RentalEditPage.vue'
 import ErrorNotFound from 'pages/ErrorNotFound.vue'
 import MainLayout from 'layouts/MainLayout.vue'
 import AuthLayout from 'layouts/AuthLayout.vue'
+import ReportsPage from 'pages/report/ReportsPage.vue' // Importa la página de reportes
 
 // Subrutas para autenticación
 const authRoutes = {
@@ -65,6 +66,11 @@ export default [
       ...customerRoutes, // Agregar rutas de clientes
       ...vehicleRoutes, // Agregar ruta de vehiculos
       ...rentalRoutes, // Agregar rutas de rentas
+      {
+        path: 'reports',
+        component: ReportsPage,
+        meta: { requiresAuth: true, roles: ['ADMIN'] }, // Asegura que solo los admins puedan acceder
+      },
     ],
   },
   {

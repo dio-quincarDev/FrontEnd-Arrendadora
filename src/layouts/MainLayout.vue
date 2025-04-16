@@ -1,6 +1,5 @@
 <template>
   <q-layout view="lHh Lpr lFf">
-    <!-- HEADER -->
     <q-header elevated class="bg-primary text-white">
       <q-toolbar>
         <q-btn flat dense round icon="menu" aria-label="Menu" @click="toggleLeftDrawer" />
@@ -10,7 +9,6 @@
       </q-toolbar>
     </q-header>
 
-    <!-- DRAWER / MENU LATERAL -->
     <q-drawer v-model="leftDrawerOpen" show-if-above bordered>
       <q-list>
         <q-item-label header> Menú </q-item-label>
@@ -35,11 +33,18 @@
           <q-item-section>Rentas</q-item-section>
         </q-item>
 
-        <!-- Agrega más rutas si es necesario -->
+        <q-item to="/reports" clickable v-ripple>
+          <q-item-section avatar><q-icon name="assessment" /></q-item-section>
+          <q-item-section>Generar Reportes</q-item-section>
+        </q-item>
+
+        <q-item to="/admin/dashboard" clickable v-ripple>
+          <q-item-section avatar><q-icon name="dashboard" /></q-item-section>
+          <q-item-section>Dashboard Admin</q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
-    <!-- CONTENIDO -->
     <q-page-container>
       <router-view />
     </q-page-container>
