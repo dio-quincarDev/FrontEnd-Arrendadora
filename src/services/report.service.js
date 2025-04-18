@@ -1,13 +1,17 @@
-// src/services/report.service.js
-import { api, API_CONSTANTS } from '../boot/axios' // Asegúrate de que la ruta sea correcta
+import { api, API_CONSTANTS } from '../boot/axios'
 
 export default {
   async exportReport(params) {
     try {
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/export`, {
         params: {
-          ...params,
+          format: params.format || 'PDF',
+          reportType: params.reportType || 'RENTAL_SUMMARY',
+          period: params.period || 'MONTHLY',
+          startDate: params.startDate,
+          endDate: params.endDate,
         },
+        responseType: params.format === 'JSON' ? 'json' : 'blob', // Importante para manejar archivos binarios
       })
       return response.data
     } catch (error) {
@@ -19,7 +23,10 @@ export default {
   async getTotalRentals(params) {
     try {
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/metrics/total-rentals`, {
-        params: params,
+        params: {
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        },
       })
       return response.data
     } catch (error) {
@@ -31,7 +38,10 @@ export default {
   async getTotalRevenue(params) {
     try {
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/metrics/total-revenue`, {
-        params: params,
+        params: {
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        },
       })
       return response.data
     } catch (error) {
@@ -43,7 +53,10 @@ export default {
   async getUniqueVehiclesRented(params) {
     try {
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/metrics/unique-vehicles`, {
-        params: params,
+        params: {
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        },
       })
       return response.data
     } catch (error) {
@@ -55,19 +68,25 @@ export default {
   async getMostRentedVehicle(params) {
     try {
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/metrics/most-rented-vehicle`, {
-        params: params,
+        params: {
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        },
       })
-      return response.data
+      return response.data || {}
     } catch (error) {
       console.error('Error al obtener el vehículo más alquilado:', error)
-      throw error
+      return {}
     }
   },
 
   async getNewCustomersCount(params) {
     try {
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/metrics/new-customers`, {
-        params: params,
+        params: {
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        },
       })
       return response.data
     } catch (error) {
@@ -79,12 +98,16 @@ export default {
   async getRentalTrends(params) {
     try {
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/metrics/rental-trends`, {
-        params: params,
+        params: {
+          period: params?.period,
+          startDate: params?.startDate,
+          endDate: params?.endDate,
+        },
       })
-      return response.data
+      return response.data || []
     } catch (error) {
       console.error('Error al obtener las tendencias de alquileres:', error)
-      throw error
+      return []
     }
   },
 }

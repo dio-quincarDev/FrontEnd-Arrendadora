@@ -1,158 +1,229 @@
 <template>
-  <q-page padding>
-    <div class="q-pa-md">
-      <h1>Generación de Reportes (Solo Administradores)</h1>
+  <q-page class="q-pa-md">
+    <div class="text-h4 q-mb-md">Reportes</div>
 
-      <q-card>
-        <q-card-section>
-          <div class="row q-col-gutter-md">
-            <div class="col-12">
-              <q-select
-                v-model="reportFormat"
-                :options="reportFormatOptions"
-                label="Formato de Descarga"
-              />
-            </div>
-
-            <div class="col-12">
-              <q-select v-model="period" :options="periodOptions" label="Período del Reporte" />
-            </div>
-
-            <div v-if="period === 'CUSTOM'" class="col-12 row q-col-gutter-md">
-              <div class="col-6">
-                <q-input v-model="startDate" type="date" label="Fecha de Inicio" />
-              </div>
-              <div class="col-6">
-                <q-input v-model="endDate" type="date" label="Fecha de Fin" />
-              </div>
-            </div>
+    <!-- Filtros -->
+    <q-card class="q-mb-md">
+      <q-card-section>
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-md-4">
+            <q-select
+              v-model="selectedReportType"
+              :options="reportTypeOptions"
+              label="Tipo de Reporte"
+              outlined
+            />
           </div>
-        </q-card-section>
 
-        <q-card-actions align="right">
-          <q-btn
-            label="Descargar PDF"
-            color="primary"
-            @click="downloadPdfReport"
-            :loading="loading && reportFormat === 'PDF'"
-          />
-          <q-btn
-            label="Descargar Excel"
-            color="secondary"
-            @click="downloadExcelReport"
-            :loading="loading && reportFormat === 'EXCEL'"
-            class="q-ml-md"
-          />
-        </q-card-actions>
-      </q-card>
+          <div class="col-12 col-md-4">
+            <q-select
+              v-model="selectedPeriod"
+              :options="periodOptions"
+              label="Período"
+              outlined
+              @update:model-value="handlePeriodChange"
+            />
+          </div>
 
-      <div v-if="loading && reportFormat !== 'PDF' && reportFormat !== 'EXCEL'" class="q-mt-md">
-        <q-spinner color="primary" size="2em" />
-        <p class="q-mt-sm">Generando reporte...</p>
-      </div>
-    </div>
+          <div v-if="showCustomDates" class="col-12 col-md-4">
+            <q-input v-model="startDate" label="Fecha de inicio" type="date" outlined />
+          </div>
+
+          <div v-if="showCustomDates" class="col-12 col-md-4">
+            <q-input v-model="endDate" label="Fecha de fin" type="date" outlined />
+          </div>
+        </div>
+      </q-card-section>
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn color="primary" label="Generar Reporte" @click="generateReport" :loading="loading" />
+      </q-card-actions>
+    </q-card>
+
+    <!-- Vista previa del reporte -->
+    <q-card v-if="reportData" class="q-mt-md">
+      <q-card-section>
+        <div class="text-h6">Vista Previa del Reporte</div>
+        <pre class="q-mt-md">{{ reportPreview }}</pre>
+      </q-card-section>
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn
+          color="primary"
+          label="Descargar PDF"
+          @click="() => downloadReport('PDF')"
+          :loading="downloading === 'PDF'"
+        />
+        <q-btn
+          color="green"
+          label="Descargar Excel"
+          @click="() => downloadReport('EXCEL')"
+          :loading="downloading === 'EXCEL'"
+          class="q-ml-sm"
+        />
+      </q-card-actions>
+    </q-card>
   </q-page>
 </template>
 
 <script setup>
-import { ref } from 'vue'
-import ReportService from 'src/services/report.service'
+import { ref, computed } from 'vue'
 import { useQuasar } from 'quasar'
+import ReportService from 'src/services/report.service'
 
 const $q = useQuasar()
 
-const reportFormat = ref('PDF') // Valor inicial
-const period = ref('MONTHLY') // Valor inicial
+// Estado del componente
+const selectedReportType = ref('RENTAL_SUMMARY')
+const selectedPeriod = ref('MONTHLY')
 const startDate = ref(null)
 const endDate = ref(null)
+const reportData = ref(null)
 const loading = ref(false)
+const downloading = ref(null)
 
-const reportFormatOptions = [
-  { label: 'PDF', value: 'PDF' },
-  { label: 'Excel', value: 'EXCEL' },
+// Opciones de configuración
+const reportTypeOptions = [
+  { label: 'Resumen de Rentas', value: 'RENTAL_SUMMARY' },
+  { label: 'Reporte Financiero', value: 'FINANCIAL_REPORT' },
+  { label: 'Reporte de Vehículos', value: 'VEHICLE_REPORT' },
 ]
 
 const periodOptions = [
-  { label: 'Mensual', value: 'MONTHLY' },
-  { label: 'Trimestral', value: 'QUARTERLY' },
-  { label: 'Anual', value: 'YEARLY' },
+  { label: 'Últimos 7 días', value: 'WEEKLY' },
+  { label: 'Último mes', value: 'MONTHLY' },
+  { label: 'Último trimestre', value: 'QUARTERLY' },
+  { label: 'Último año', value: 'YEARLY' },
   { label: 'Personalizado', value: 'CUSTOM' },
 ]
 
-async function downloadPdfReport() {
-  loading.value = true
-  try {
-    const params = {
-      format: 'PDF',
-      reportType: 'RENTAL_SUMMARY', // Puedes ajustarlo si tienes diferentes tipos de reportes
-      period: period.value,
-      startDate: period.value === 'CUSTOM' ? startDate.value : null,
-      endDate: period.value === 'CUSTOM' ? endDate.value : null,
-    }
-    const response = await ReportService.exportReport(params)
-    downloadFile(
-      response,
-      'application/pdf',
-      generateFilename('rental_summary', period.value, startDate.value, endDate.value, 'pdf'),
-    )
-  } catch (error) {
-    console.error('Error al descargar el reporte PDF:', error)
+// Computed properties
+const showCustomDates = computed(() => selectedPeriod.value === 'CUSTOM')
+const reportPreview = computed(() => {
+  if (!reportData.value) return 'No hay datos para mostrar'
+  return JSON.stringify(reportData.value, null, 2)
+})
+
+// Métodos
+function handlePeriodChange() {
+  if (selectedPeriod.value !== 'CUSTOM') {
+    startDate.value = null
+    endDate.value = null
+  }
+}
+
+function validateCustomDates() {
+  if (startDate.value && endDate.value && new Date(startDate.value) > new Date(endDate.value)) {
     $q.notify({
       type: 'negative',
-      message: 'Error al generar y descargar el reporte PDF.',
+      message: 'La fecha de inicio no puede ser posterior a la fecha de fin',
+    })
+    return false
+  }
+  return true
+}
+
+function getPrimitiveValue(value) {
+  return value?.value ?? value
+}
+
+function cleanParams(params) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== null && value !== undefined),
+  )
+}
+
+async function generateReport() {
+  if (showCustomDates.value && !validateCustomDates()) return
+
+  loading.value = true
+  try {
+    const params = cleanParams({
+      format: 'JSON',
+      reportType: getPrimitiveValue(selectedReportType.value),
+      period: getPrimitiveValue(selectedPeriod.value),
+      startDate: showCustomDates.value ? formatDate(startDate.value) : null,
+      endDate: showCustomDates.value ? formatDate(endDate.value) : null,
+    })
+
+    // Uso de exportReport() para todas las vistas previas
+    const response = await ReportService.exportReport({ ...params, format: 'JSON' })
+    reportData.value = response // Formateo del JSON
+
+    $q.notify({
+      type: 'positive',
+      message: 'Reporte generado con éxito',
+    })
+  } catch (error) {
+    console.error('Error al generar el reporte:', error.response?.data || error.message || error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al generar el reporte',
+      caption: error.response?.data?.message || error.message,
     })
   } finally {
     loading.value = false
   }
 }
 
-async function downloadExcelReport() {
-  loading.value = true
+async function downloadReport(format) {
   try {
     const params = {
-      format: 'EXCEL',
-      reportType: 'RENTAL_SUMMARY', // Ajusta si es necesario
-      period: period.value,
-      startDate: period.value === 'CUSTOM' ? startDate.value : null,
-      endDate: period.value === 'CUSTOM' ? endDate.value : null,
+      format: format,
+      reportType: selectedReportType.value.value,
+      period: selectedPeriod.value.value,
+      startDate: showCustomDates.value ? formatDate(startDate.value) : null,
+      endDate: showCustomDates.value ? formatDate(endDate.value) : null,
     }
+
     const response = await ReportService.exportReport(params)
-    downloadFile(
-      response,
-      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      generateFilename('rental_summary', period.value, startDate.value, endDate.value, 'xlsx'),
-    )
+    downloadFile(response, format)
+
+    $q.notify({ type: 'positive', message: 'Reporte descargado' })
   } catch (error) {
-    console.error('Error al descargar el reporte Excel:', error)
     $q.notify({
       type: 'negative',
-      message: 'Error al generar y descargar el reporte Excel.',
+      message: 'Error al descargar',
+      caption: error.response?.data?.message || error.message,
     })
   } finally {
-    loading.value = false
+    downloading.value = null
   }
 }
 
-function generateFilename(reportType, period, startDate, endDate, extension) {
-  let filename = `${reportType}_${period}`
-  if (startDate && endDate) {
-    filename += `_${startDate}_${endDate}`
-  } else {
-    const today = new Date().toISOString().slice(0, 10)
-    filename += `_${today}`
-  }
-  return `${filename}.${extension}`
+function formatDate(dateString) {
+  if (!dateString) return null
+  return new Date(dateString).toISOString().split('T')[0]
 }
 
-function downloadFile(data, mimeType, filename) {
-  const blob = new Blob([data], { type: mimeType })
+function downloadFile(blobData, format) {
+  const formats = {
+    PDF: { mimeType: 'application/pdf', extension: 'pdf' },
+    EXCEL: {
+      mimeType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      extension: 'xlsx',
+    },
+  }
+
+  const blob = new Blob([blobData], { type: formats[format].mimeType })
   const url = window.URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = `reporte_${new Date().toISOString().slice(0, 10)}.${formats[format].extension}`
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
   window.URL.revokeObjectURL(url)
 }
 </script>
+
+<style scoped>
+pre {
+  background: #f5f5f5;
+  padding: 16px;
+  border-radius: 4px;
+  max-height: 400px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+</style>

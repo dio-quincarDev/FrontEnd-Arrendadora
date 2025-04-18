@@ -1,32 +1,37 @@
 <template>
-  <q-card class="metric-card">
+  <q-card>
     <q-card-section>
-      <div class="metric-value">
-        <slot name="value"></slot>
-      </div>
-      <div class="metric-label">
-        <slot name="label"></slot>
+      <div class="row items-center">
+        <q-icon :name="icon" size="md" color="primary" class="q-mr-sm" />
+        <div>
+          <div class="text-subtitle2">{{ title }}</div>
+          <div class="text-h6">{{ formattedValue }}</div>
+        </div>
       </div>
     </q-card-section>
   </q-card>
 </template>
 
 <script setup>
-// No se necesita lógica específica aquí por ahora
+import { computed } from 'vue'
+
+const props = defineProps({
+  title: String,
+  value: [Number, String, Object],
+  icon: String,
+  isCurrency: {
+    type: Boolean,
+    default: false,
+  },
+})
+
+const formattedValue = computed(() => {
+  if (props.isCurrency) {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency: 'MXN',
+    }).format(props.value || 0)
+  }
+  return props.value || 'N/A'
+})
 </script>
-
-<style scoped>
-.metric-card {
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-}
-
-.metric-value {
-  font-size: 24px;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.metric-label {
-  color: gray;
-}
-</style>

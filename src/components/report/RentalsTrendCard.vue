@@ -1,29 +1,58 @@
 <template>
-  <q-card class="metric-card">
+  <q-card class="q-pa-md">
     <q-card-section>
-      <h2>Tendencias de Alquileres</h2>
-      <ul v-if="trends.length > 0">
-        <li v-for="trend in trends" :key="trend.period">
-          {{ trend.period }}: {{ trend.rentalCount }} alquileres
-        </li>
-      </ul>
-      <p v-else>No hay tendencias de alquileres disponibles.</p>
+      <div class="text-h6 q-mb-md">Tendencias de Alquileres</div>
+      <Bar :data="chartData" :options="chartOptions" />
     </q-card-section>
   </q-card>
 </template>
 
 <script setup>
-import { defineProps } from 'vue'
+import { computed } from 'vue'
+import { Bar } from 'vue-chartjs'
+import {
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  BarElement,
+  CategoryScale,
+  LinearScale,
+} from 'chart.js'
 
-defineProps({
+ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale)
+
+const props = defineProps({
   trends: {
     type: Array,
-    required: true,
     default: () => [],
   },
 })
+
+const chartData = computed(() => ({
+  labels: props.trends.map((t) => t.period),
+  datasets: [
+    {
+      label: 'Alquileres',
+      data: props.trends.map((t) => t.rentalCount),
+      backgroundColor: '#1976D2',
+    },
+  ],
+}))
+
+const chartOptions = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: {
+      position: 'bottom',
+    },
+  },
+}
 </script>
 
 <style scoped>
-/* Los estilos de metric-card ya están en MetricCard.vue */
+.q-card-section {
+  height: 400px; /* espacio para el gráfico */
+}
 </style>

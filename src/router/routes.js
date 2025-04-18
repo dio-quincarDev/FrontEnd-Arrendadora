@@ -19,6 +19,7 @@ import ErrorNotFound from 'pages/ErrorNotFound.vue'
 import MainLayout from 'layouts/MainLayout.vue'
 import AuthLayout from 'layouts/AuthLayout.vue'
 import ReportsPage from 'pages/report/ReportsPage.vue' // Importa la página de reportes
+import AdminDashboardPage from 'pages/report/AdminDashboardPage.vue'
 
 // Subrutas para autenticación
 const authRoutes = {
@@ -70,6 +71,11 @@ export default [
         path: 'reports',
         component: ReportsPage,
         meta: { requiresAuth: true, roles: ['ADMIN'] }, // Asegura que solo los admins puedan acceder
+      },
+      {
+        path: 'reports/dashboard',
+        component: AdminDashboardPage,
+        meta: { requiresAuth: true, roles: ['ADMIN'] },
       },
     ],
   },
