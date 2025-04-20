@@ -20,6 +20,15 @@ export default {
     }
   },
 
+  async exportGenericTable({ headers, data, format }) {
+    const response = await api.post(
+      `${API_CONSTANTS.REPORTS_ROUTE}/export-metrics`,
+      { headers, data, format },
+      { responseType: 'blob' },
+    )
+    return response.data
+  },
+
   async getTotalRentals(params) {
     try {
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/metrics/total-rentals`, {

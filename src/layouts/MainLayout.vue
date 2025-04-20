@@ -33,12 +33,6 @@
           <q-item-section>Rentas</q-item-section>
         </q-item>
 
-        <!-- Corregir ruta del dashboard y agrupar reportes -->
-        <q-item to="/reports" clickable v-ripple>
-          <q-item-section avatar><q-icon name="assessment" /></q-item-section>
-          <q-item-section>Reportes</q-item-section>
-        </q-item>
-
         <q-item to="/reports/dashboard" clickable v-ripple>
           <q-item-section avatar><q-icon name="dashboard" /></q-item-section>
           <q-item-section>Dashboard</q-item-section>
