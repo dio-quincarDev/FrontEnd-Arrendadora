@@ -70,6 +70,34 @@
       </q-card-section>
     </q-card>
 
+    <!-- Gráfico dinámico -->
+    <q-card class="q-mt-md">
+      <q-card-section>
+        <div class="text-h6 q-mb-sm">Vista Previa del Gráfico</div>
+        <div class="row q-gutter-sm items-center">
+          <q-radio v-model="chartFormat" val="svg" label="SVG (alta calidad)" />
+          <q-radio v-model="chartFormat" val="png" label="PNG (rápido)" />
+          <q-btn icon="refresh" round color="primary" :loading="chartLoading" @click="loadChart" />
+        </div>
+        <div v-if="chartLoading" class="q-mt-md flex flex-center">
+          <q-spinner size="lg" />
+        </div>
+        <object
+          v-if="chartFormat === 'svg' && svgContent"
+          :data="svgDataUrl"
+          type="image/svg+xml"
+          class="q-mt-md full-width"
+          style="height: 400px"
+        />
+        <img
+          v-else-if="chartFormat === 'png' && pngUrl"
+          :src="pngUrl"
+          class="q-mt-md full-width"
+          style="height: 400px"
+        />
+      </q-card-section>
+    </q-card>
+
     <!-- Gráfico de Tendencias -->
     <RentalsTrendCard :trends="rentalTrends" class="q-mt-md" />
   </q-page>
@@ -78,6 +106,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { API_CONSTANTS } from 'src/boot/axios'
 import ReportService from 'src/services/report.service'
 import MetricCard from 'src/components/report/MetricCard.vue'
 import RentalsTrendCard from 'src/components/report/RentalsTrendCard.vue'
@@ -100,6 +129,15 @@ const loading = ref(false)
 const period = ref('MONTHLY')
 const startDate = ref(null)
 const endDate = ref(null)
+
+const chartFormat = ref('svg')
+const svgContent = ref(null)
+const pngUrl = ref(null)
+const chartLoading = ref(false)
+
+const svgDataUrl = computed(() =>
+  svgContent.value ? `data:image/svg+xml;utf8,${encodeURIComponent(svgContent.value)}` : null,
+)
 
 const reportTypeOptions = [
   { label: 'Resumen de Rentas', value: 'RENTAL_SUMMARY' },
@@ -190,6 +228,30 @@ async function exportMetrics(format) {
     $q.notify({ type: 'positive', message: 'Métricas exportadas con éxito' })
   } catch (err) {
     $q.notify({ type: 'negative', message: 'Error exportando métricas', caption: err.message })
+  }
+}
+
+async function loadChart() {
+  chartLoading.value = true
+  const query = new URLSearchParams({
+    format: chartFormat.value === 'svg' ? 'CHART_SVG' : 'CHART_PNG',
+    reportType: selectedReportType.value,
+    period: period.value,
+    startDate: formatDate(startDate.value),
+    endDate: formatDate(endDate.value),
+  })
+
+  try {
+    if (chartFormat.value === 'svg') {
+      const response = await fetch(`${API_CONSTANTS.REPORTS_ROUTE}/export?${query.toString()}`)
+      svgContent.value = await response.text()
+    } else {
+      pngUrl.value = `${API_CONSTANTS.REPORTS_ROUTE}/export?${query.toString()}`
+    }
+  } catch (e) {
+    $q.notify({ type: 'negative', message: 'Error al cargar gráfico', caption: e.message })
+  } finally {
+    chartLoading.value = false
   }
 }
 

@@ -15,7 +15,7 @@
         <q-btn
           color="primary"
           label="Actualizar Métricas"
-          @click="$emit('update-metrics')"
+          @click="emitFilters"
           :loading="loading"
         />
       </div>
@@ -24,7 +24,7 @@
 </template>
 
 <script setup>
-import { ref, defineProps, defineEmits, watch } from 'vue'
+import { ref, defineProps, defineEmits } from 'vue'
 
 const startDate = ref(null)
 const endDate = ref(null)
@@ -37,7 +37,7 @@ defineProps({
   },
 })
 
-const emit = defineEmits(['update-metrics', 'update-filters'])
+const emit = defineEmits(['update-filters'])
 
 const periodOptions = [
   { label: 'Diario', value: 'DAILY' },
@@ -48,13 +48,13 @@ const periodOptions = [
   { label: 'Anual', value: 'ANNUAL' },
 ]
 
-watch([startDate, endDate, period], () => {
+function emitFilters() {
   emit('update-filters', {
     startDate: startDate.value,
     endDate: endDate.value,
     period: period.value,
   })
-})
+}
 </script>
 
 <style scoped>
