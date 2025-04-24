@@ -1,4 +1,3 @@
-// NUEVA VERSION MEJORADA - AdminDashboardPage.vue
 <template>
   <q-page padding>
     <div class="flex items-center justify-between q-mb-md">
@@ -10,34 +9,57 @@
           label="Exportar Métricas (PDF)"
           @click="exportMetrics('PDF')"
           class="q-mr-sm"
+          :loading="exporting"
         />
         <q-btn
           color="secondary"
           icon="grid_on"
           label="Exportar Métricas (Excel)"
           @click="exportMetrics('EXCEL')"
+          :loading="exporting"
         />
       </div>
     </div>
 
     <!-- Filtros -->
-    <MetricFilter @update-filters="updateFilters" :loading="loading" />
+    <MetricFilter @update-filters="handleFiltersUpdate" :loading="loading" />
 
     <!-- Métricas -->
     <div class="metrics-container q-mt-md">
-      <MetricCard title="Total de Alquileres" :value="totalRentals" icon="directions_car" />
+      <MetricCard
+        title="Total de Alquileres"
+        :value="totalRentals"
+        icon="directions_car"
+        :loading="loading"
+      />
       <MetricCard
         title="Ingresos Totales"
         :value="formattedRevenue"
         icon="attach_money"
         is-currency
+        :loading="loading"
       />
-      <MetricCard title="Vehículos Únicos" :value="uniqueVehicles" icon="car_rental" />
-      <MetricCard title="Vehículo Más Alquilado" :value="mostRentedVehicleLabel" icon="star" />
-      <MetricCard title="Nuevos Clientes" :value="newCustomers" icon="person_add" />
+      <MetricCard
+        title="Vehículos Únicos"
+        :value="uniqueVehicles"
+        icon="car_rental"
+        :loading="loading"
+      />
+      <MetricCard
+        title="Vehículo Más Alquilado"
+        :value="mostRentedVehicleLabel"
+        icon="star"
+        :loading="loading"
+      />
+      <MetricCard
+        title="Nuevos Clientes"
+        :value="newCustomers"
+        icon="person_add"
+        :loading="loading"
+      />
     </div>
 
-    <!-- Reporte PDF / Excel por tipo -->
+    <!-- Reporte Personalizado -->
     <q-card class="q-mt-md">
       <q-card-section>
         <div class="text-h6">Generar Reporte Personalizado</div>
@@ -49,6 +71,7 @@
             :options="reportTypeOptions"
             label="Tipo de Reporte"
             outlined
+            :disable="downloading"
           />
         </div>
         <div class="col-12 col-md-4">
@@ -57,55 +80,100 @@
             :options="reportFormatOptions"
             label="Formato"
             outlined
+            :disable="downloading"
           />
         </div>
         <div class="col-12 col-md-4 flex items-end">
           <q-btn
             color="primary"
-            label="Descargar Reporte"
-            @click="downloadReport"
+            label="Generar Reporte"
+            @click="generateCustomReport"
             :loading="downloading"
+            icon="download"
           />
         </div>
       </q-card-section>
     </q-card>
 
-    <!-- Gráfico dinámico -->
+    <!-- Visualización de Gráficos -->
     <q-card class="q-mt-md">
       <q-card-section>
-        <div class="text-h6 q-mb-sm">Vista Previa del Gráfico</div>
+        <div class="text-h6 q-mb-sm">Visualización de Datos</div>
         <div class="row q-gutter-sm items-center">
-          <q-radio v-model="chartFormat" val="svg" label="SVG (alta calidad)" />
-          <q-radio v-model="chartFormat" val="png" label="PNG (rápido)" />
-          <q-btn icon="refresh" round color="primary" :loading="chartLoading" @click="loadChart" />
+          <q-radio v-model="chartDisplayMode" val="chart" label="Gráfico Interactivo" />
+          <q-radio v-model="chartDisplayMode" val="table" label="Vista Tabular" />
+          <q-space />
+          <q-btn icon="refresh" round color="primary" @click="refreshData" :loading="refreshing" />
         </div>
-        <div v-if="chartLoading" class="q-mt-md flex flex-center">
-          <q-spinner size="lg" />
-        </div>
-        <object
-          v-if="chartFormat === 'svg' && svgContent"
-          :data="svgDataUrl"
-          type="image/svg+xml"
-          class="q-mt-md full-width"
-          style="height: 400px"
-        />
-        <img
-          v-else-if="chartFormat === 'png' && pngUrl"
-          :src="pngUrl"
-          class="q-mt-md full-width"
-          style="height: 400px"
-        />
+
+        <!-- Contenido dinámico basado en el modo seleccionado -->
+        <template v-if="chartDisplayMode === 'chart'">
+          <div class="row q-gutter-sm q-mt-md items-center">
+            <q-select
+              v-model="chartType"
+              :options="chartTypeOptions"
+              label="Tipo de Gráfico"
+              dense
+              outlined
+              style="min-width: 200px"
+            />
+            <q-radio v-model="chartFormat" val="svg" label="SVG (Alta calidad)" />
+            <q-radio v-model="chartFormat" val="png" label="PNG (Rápido)" />
+          </div>
+
+          <div v-if="chartLoading" class="q-mt-md flex flex-center">
+            <q-spinner size="lg" />
+            <span class="q-ml-sm">Cargando gráfico...</span>
+          </div>
+
+          <div v-else class="chart-container q-mt-md">
+            <object
+              v-if="chartFormat === 'svg' && svgContent"
+              :data="svgDataUrl"
+              type="image/svg+xml"
+              class="full-width"
+              style="height: 400px"
+            />
+            <img
+              v-else-if="chartFormat === 'png' && pngUrl"
+              :src="pngUrl"
+              class="full-width"
+              style="height: 400px; object-fit: contain"
+              alt="Gráfico de métricas"
+            />
+            <div v-else class="text-center q-pa-md text-grey">
+              No hay datos disponibles para mostrar el gráfico
+            </div>
+          </div>
+        </template>
+
+        <template v-else>
+          <q-table
+            v-if="tableData.length > 0"
+            class="q-mt-md"
+            :rows="tableData"
+            :columns="tableColumns"
+            row-key="id"
+            dense
+            flat
+            bordered
+          />
+          <div v-else class="text-center q-pa-md text-grey">
+            No hay datos disponibles para mostrar en tabla
+          </div>
+        </template>
       </q-card-section>
     </q-card>
 
     <!-- Gráfico de Tendencias -->
-    <RentalsTrendCard :trends="rentalTrends" class="q-mt-md" />
+    <RentalsTrendCard :trends="rentalTrends" class="q-mt-md" :loading="loading" />
   </q-page>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useQuasar } from 'quasar'
+import { useRouter } from 'vue-router'
 import { API_CONSTANTS } from 'src/boot/axios'
 import ReportService from 'src/services/report.service'
 import MetricCard from 'src/components/report/MetricCard.vue'
@@ -113,36 +181,44 @@ import RentalsTrendCard from 'src/components/report/RentalsTrendCard.vue'
 import MetricFilter from 'src/components/report/MetricFilter.vue'
 
 const $q = useQuasar()
+const router = useRouter()
 
+// Estado del componente
+const loading = ref(false)
+const exporting = ref(false)
+const downloading = ref(false)
+const chartLoading = ref(false)
+const refreshing = ref(false)
+
+// Datos principales
 const totalRentals = ref(0)
 const totalRevenue = ref(0)
 const uniqueVehicles = ref(0)
 const mostRentedVehicle = ref({})
 const newCustomers = ref(0)
 const rentalTrends = ref([])
+const tableData = ref([])
 
-const reportFormat = ref('PDF')
-const selectedReportType = ref('RENTAL_SUMMARY')
-const downloading = ref(false)
-const loading = ref(false)
-
+// Filtros
 const period = ref('MONTHLY')
 const startDate = ref(null)
 const endDate = ref(null)
 
+// Reportes
+const reportFormat = ref('PDF')
+const selectedReportType = ref('RENTAL_SUMMARY')
+const chartDisplayMode = ref('chart')
+const chartType = ref('bar')
 const chartFormat = ref('svg')
 const svgContent = ref(null)
 const pngUrl = ref(null)
-const chartLoading = ref(false)
 
-const svgDataUrl = computed(() =>
-  svgContent.value ? `data:image/svg+xml;utf8,${encodeURIComponent(svgContent.value)}` : null,
-)
-
+// Opciones de configuración
 const reportTypeOptions = [
   { label: 'Resumen de Rentas', value: 'RENTAL_SUMMARY' },
   { label: 'Reporte Financiero', value: 'FINANCIAL_REPORT' },
   { label: 'Reporte de Vehículos', value: 'VEHICLE_REPORT' },
+  { label: 'Actividad de Clientes', value: 'CUSTOMER_ACTIVITY' },
 ]
 
 const reportFormatOptions = [
@@ -150,34 +226,56 @@ const reportFormatOptions = [
   { label: 'Excel', value: 'EXCEL' },
 ]
 
-const formattedRevenue = computed(() => totalRevenue.value)
+const chartTypeOptions = [
+  { label: 'Barras', value: 'bar' },
+  { label: 'Líneas', value: 'line' },
+  { label: 'Tarta', value: 'pie' },
+  { label: 'Área', value: 'area' },
+]
+
+const tableColumns = [
+  { name: 'period', label: 'Período', field: 'period', align: 'left' },
+  { name: 'value', label: 'Valor', field: 'value', align: 'right' },
+]
+
+// Computed
+const svgDataUrl = computed(() =>
+  svgContent.value ? `data:image/svg+xml;utf8,${encodeURIComponent(svgContent.value)}` : null,
+)
+
+const formattedRevenue = computed(() =>
+  new Intl.NumberFormat('es-MX', {
+    style: 'currency',
+    currency: 'MXN',
+  }).format(totalRevenue.value),
+)
+
 const mostRentedVehicleLabel = computed(() => {
   if (!mostRentedVehicle.value.brand) return 'N/A'
-  return `${mostRentedVehicle.value.brand} ${mostRentedVehicle.value.model} (${mostRentedVehicle.value.rentalCount})`
+  return `${mostRentedVehicle.value.brand} ${mostRentedVehicle.value.model} (${mostRentedVehicle.value.rentalCount || 0})`
 })
 
-function updateFilters(filters) {
+// Métodos
+function handleFiltersUpdate(filters) {
   startDate.value = filters.startDate
   endDate.value = filters.endDate
   period.value = filters.period?.value || filters.period
-  fetchMetrics()
+  loadData()
 }
 
-async function fetchMetrics() {
+async function loadData() {
   loading.value = true
   try {
-    const params = {
-      startDate: formatDate(startDate.value),
-      endDate: formatDate(endDate.value),
-      period: period.value,
-    }
-    const [rentals, revenue, vehicles, mostRented, customers, trends] = await Promise.all([
-      ReportService.getTotalRentals(params),
-      ReportService.getTotalRevenue(params),
-      ReportService.getUniqueVehiclesRented(params),
-      ReportService.getMostRentedVehicle(params),
-      ReportService.getNewCustomersCount(params),
-      ReportService.getRentalTrends(params),
+    const params = buildQueryParams()
+
+    const [rentals, revenue, vehicles, mostRented, customers, trends, table] = await Promise.all([
+      ReportService.getTotalRentalsMetric(params),
+      ReportService.getTotalRevenueMetric(params),
+      ReportService.getUniqueVehiclesRentedMetric(params),
+      ReportService.getMostRentedVehicleMetric(params),
+      ReportService.getNewCustomersCountMetric(params),
+      ReportService.getRentalTrendsMetric(params),
+      ReportService.getTableData(params),
     ])
 
     totalRentals.value = rentals
@@ -185,34 +283,36 @@ async function fetchMetrics() {
     uniqueVehicles.value = vehicles
     mostRentedVehicle.value = mostRented
     newCustomers.value = customers
-    rentalTrends.value = trends.map((t) => ({ period: t.period, rentalCount: t.rentalCount }))
-  } catch (err) {
-    $q.notify({ type: 'negative', message: 'Error al cargar métricas', caption: err.message })
+    rentalTrends.value = trends
+    tableData.value = table
+
+    if (chartDisplayMode.value === 'chart') {
+      await loadChart()
+    }
+  } catch (error) {
+    handleError(error, 'Error cargando datos')
   } finally {
     loading.value = false
   }
 }
 
-async function downloadReport() {
-  downloading.value = true
+async function refreshData() {
+  refreshing.value = true
   try {
-    const reportData = await ReportService.exportReport({
-      format: reportFormat.value,
-      reportType: selectedReportType.value,
-      period: period.value,
-      startDate: formatDate(startDate.value),
-      endDate: formatDate(endDate.value),
+    await loadData()
+    $q.notify({
+      type: 'positive',
+      message: 'Datos actualizados correctamente',
     })
-    downloadFile(reportData, reportFormat.value)
-    $q.notify({ type: 'positive', message: 'Reporte generado con éxito' })
-  } catch (err) {
-    $q.notify({ type: 'negative', message: 'Error al generar reporte', caption: err.message })
+  } catch (error) {
+    handleError(error, 'Error actualizando datos')
   } finally {
-    downloading.value = false
+    refreshing.value = false
   }
 }
 
 async function exportMetrics(format) {
+  exporting.value = true
   try {
     const headers = ['Métrica', 'Valor']
     const data = [
@@ -224,44 +324,109 @@ async function exportMetrics(format) {
     ]
 
     const blob = await ReportService.exportGenericTable({ headers, data, format })
-    downloadFile(blob, format)
-    $q.notify({ type: 'positive', message: 'Métricas exportadas con éxito' })
-  } catch (err) {
-    $q.notify({ type: 'negative', message: 'Error exportando métricas', caption: err.message })
+    downloadFile(blob, format, 'metricas_generales')
+    $q.notify({
+      type: 'positive',
+      message: 'Métricas exportadas correctamente',
+    })
+  } catch (error) {
+    handleError(error, 'Error exportando métricas')
+  } finally {
+    exporting.value = false
+  }
+}
+
+async function generateCustomReport() {
+  downloading.value = true
+  try {
+    const reportData = await ReportService.exportReport({
+      format: reportFormat.value,
+      reportType: selectedReportType.value,
+      ...buildQueryParams(),
+    })
+    downloadFile(
+      reportData,
+      reportFormat.value,
+      `reporte_${selectedReportType.value.toLowerCase()}`,
+    )
+    $q.notify({
+      type: 'positive',
+      message: 'Reporte generado correctamente',
+    })
+  } catch (error) {
+    handleError(error, 'Error generando reporte')
+  } finally {
+    downloading.value = false
   }
 }
 
 async function loadChart() {
   chartLoading.value = true
-  const query = new URLSearchParams({
-    format: chartFormat.value === 'svg' ? 'CHART_SVG' : 'CHART_PNG',
-    reportType: selectedReportType.value,
-    period: period.value,
-    startDate: formatDate(startDate.value),
-    endDate: formatDate(endDate.value),
-  })
-
   try {
-    if (chartFormat.value === 'svg') {
-      const response = await fetch(`${API_CONSTANTS.REPORTS_ROUTE}/export?${query.toString()}`)
-      svgContent.value = await response.text()
-    } else {
-      pngUrl.value = `${API_CONSTANTS.REPORTS_ROUTE}/export?${query.toString()}`
+    const params = {
+      ...buildQueryParams(),
+      format: chartFormat.value === 'svg' ? 'CHART_SVG' : 'CHART_PNG',
+      reportType: selectedReportType.value,
+      chartType: chartType.value,
     }
-  } catch (e) {
-    $q.notify({ type: 'negative', message: 'Error al cargar gráfico', caption: e.message })
+
+    if (chartFormat.value === 'svg') {
+      const response = await ReportService.exportReport(params)
+      if (typeof response === 'string' && response.includes('<svg')) {
+        svgContent.value = response
+      } else {
+        throw new Error('Formato SVG inválido recibido del servidor')
+      }
+    } else {
+      pngUrl.value = `${API_CONSTANTS.REPORTS_ROUTE}/export?${new URLSearchParams(params)}&t=${Date.now()}`
+    }
+  } catch (error) {
+    handleError(error, 'Error cargando gráfico')
+    // Fallback a PNG si SVG falla
+    if (chartFormat.value === 'svg') {
+      chartFormat.value = 'png'
+      await loadChart()
+    }
   } finally {
     chartLoading.value = false
   }
 }
 
-function downloadFile(data, format) {
+function buildQueryParams() {
+  const params = {
+    period: period.value || 'MONTHLY',
+    chartType: chartType.value || 'bar',
+  }
+
+  if (startDate.value) {
+    params.startDate = formatDate(startDate.value)
+  }
+  if (endDate.value) {
+    params.endDate = formatDate(endDate.value)
+  }
+
+  return params
+}
+
+function formatDate(dateString) {
+  if (!dateString) return null
+  try {
+    const date = new Date(dateString)
+    return date.toISOString().split('T')[0]
+  } catch {
+    return null
+  }
+}
+
+function downloadFile(data, format, baseName) {
   const mimeType =
     format === 'PDF'
       ? 'application/pdf'
       : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+
   const extension = format === 'PDF' ? 'pdf' : 'xlsx'
-  const filename = `metricas_${new Date().toISOString().slice(0, 10)}.${extension}`
+  const filename = `${baseName}_${new Date().toISOString().slice(0, 10)}.${extension}`
+
   const blob = new Blob([data], { type: mimeType })
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
@@ -271,12 +436,28 @@ function downloadFile(data, format) {
   document.body.removeChild(link)
 }
 
-function formatDate(dateString) {
-  if (!dateString) return null
-  return new Date(dateString).toISOString().split('T')[0]
+function handleError(error, message) {
+  console.error(message, error)
+  $q.notify({
+    type: 'negative',
+    message,
+    caption: error.response?.data?.message || error.message,
+    position: 'top-right',
+  })
+
+  // Redirigir si es error de autenticación
+  if (error.response?.status === 401) {
+    router.push('/auth/login?redirect=/reports/dashboard')
+  } else if (error.response?.status === 403) {
+    router.push('/unauthorized')
+  }
 }
 
-onMounted(fetchMetrics)
+// Inicialización
+onMounted(() => {
+  console.log('AdminDashboardPage montado - Iniciando carga de datos')
+  loadData()
+})
 </script>
 
 <style scoped>
@@ -284,5 +465,25 @@ onMounted(fetchMetrics)
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 16px;
+}
+
+.chart-container {
+  min-height: 400px;
+  border: 1px solid #eee;
+  border-radius: 4px;
+  background-color: #f9f9f9;
+}
+
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 255, 255, 0.7);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
 }
 </style>
