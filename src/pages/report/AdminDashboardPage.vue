@@ -15,7 +15,7 @@
       />
       <MetricCard
         title="Ingresos Totales"
-        :value="formattedRevenue"
+        :value="totalRevenue"
         icon="attach_money"
         is-currency
         :loading="loading"
@@ -176,7 +176,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useQuasar } from 'quasar'
 import { useRouter } from 'vue-router'
 import { API_CONSTANTS } from 'src/boot/axios'
@@ -247,12 +247,8 @@ const svgDataUrl = computed(() =>
   svgContent.value ? `data:image/svg+xml;utf8,${encodeURIComponent(svgContent.value)}` : null,
 )
 
-const formattedRevenue = computed(() =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(totalRevenue.value),
-)
+// Eliminamos formattedRevenue que no se usa
+// y usamos directamente la lógica de formateo en el componente MetricCard
 
 const mostRentedVehicleLabel = computed(() => {
   if (!mostRentedVehicle.value.brand) return 'N/A'
@@ -266,6 +262,17 @@ function handleFiltersUpdate(filters) {
   period.value = filters.period?.value || filters.period
   loadData()
 }
+
+watch(
+  () => totalRevenue.value,
+  (newValue, oldValue) => {
+    console.log(`totalRevenue.value changed from ${oldValue} to ${newValue}`)
+    console.log(`Type of newValue: ${typeof newValue}`)
+    if (isNaN(newValue)) {
+      console.warn('totalRevenue.value is becoming NaN!')
+    }
+  },
+)
 
 async function loadData() {
   loading.value = true
@@ -283,7 +290,24 @@ async function loadData() {
     ])
 
     totalRentals.value = rentals
-    totalRevenue.value = revenue
+
+    //  *** Ajuste para manejar la respuesta de revenue  ***
+    console.log('getTotalRevenueMetric response (raw):', revenue)
+    console.log('Type of revenue:', typeof revenue)
+
+    if (typeof revenue === 'string') {
+      // Si viene como string, limpiamos cualquier símbolo de moneda y espacios
+      const numericValue = parseFloat(revenue.replace(/[$\s,]/g, ''))
+      console.log('Parsed revenue:', numericValue)
+      totalRevenue.value = isNaN(numericValue) ? 0 : numericValue
+    } else if (typeof revenue === 'number') {
+      totalRevenue.value = revenue
+    } else {
+      console.warn('Unexpected revenue type, setting to 0:', revenue)
+      totalRevenue.value = 0
+    }
+    //  *** Fin del ajuste  ***
+
     uniqueVehicles.value = vehicles
     mostRentedVehicle.value = mostRented
     newCustomers.value = customers
