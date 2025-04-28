@@ -2,29 +2,10 @@
   <q-page padding>
     <div class="flex items-center justify-between q-mb-md">
       <div class="text-h4">Panel de Administración</div>
-      <div>
-        <q-btn
-          color="primary"
-          icon="picture_as_pdf"
-          label="Exportar Métricas (PDF)"
-          @click="exportMetrics('PDF')"
-          class="q-mr-sm"
-          :loading="exporting"
-        />
-        <q-btn
-          color="secondary"
-          icon="grid_on"
-          label="Exportar Métricas (Excel)"
-          @click="exportMetrics('EXCEL')"
-          :loading="exporting"
-        />
-      </div>
     </div>
 
-    <!-- Filtros -->
     <MetricFilter @update-filters="handleFiltersUpdate" :loading="loading" />
 
-    <!-- Métricas -->
     <div class="metrics-container q-mt-md">
       <MetricCard
         title="Total de Alquileres"
@@ -59,10 +40,9 @@
       />
     </div>
 
-    <!-- Reporte Personalizado -->
     <q-card class="q-mt-md">
       <q-card-section>
-        <div class="text-h6">Generar Reporte Personalizado</div>
+        <div class="text-h6">Generar Reporte</div>
       </q-card-section>
       <q-card-section class="row q-col-gutter-md">
         <div class="col-12 col-md-4">
@@ -71,6 +51,8 @@
             :options="reportTypeOptions"
             label="Tipo de Reporte"
             outlined
+            emit-value
+            map-options
             :disable="downloading"
           />
         </div>
@@ -86,16 +68,41 @@
         <div class="col-12 col-md-4 flex items-end">
           <q-btn
             color="primary"
-            label="Generar Reporte"
+            label="Generar Reporte Personalizado"
             @click="generateCustomReport"
             :loading="downloading"
             icon="download"
           />
         </div>
       </q-card-section>
+
+      <q-card-section class="row q-col-gutter-md q-mt-md">
+        <div class="col-12">
+          <div class="text-subtitle1">Descarga Rápida de Métricas Generales</div>
+        </div>
+        <div class="col-6">
+          <q-btn
+            color="secondary"
+            label="Descargar Métricas (Excel)"
+            @click="downloadMetrics('EXCEL')"
+            :loading="downloading"
+            icon="download"
+            full-width
+          />
+        </div>
+        <div class="col-6">
+          <q-btn
+            color="accent"
+            label="Descargar Métricas (PDF)"
+            @click="downloadMetrics('PDF')"
+            :loading="downloading"
+            icon="download"
+            full-width
+          />
+        </div>
+      </q-card-section>
     </q-card>
 
-    <!-- Visualización de Gráficos -->
     <q-card class="q-mt-md">
       <q-card-section>
         <div class="text-h6 q-mb-sm">Visualización de Datos</div>
@@ -106,7 +113,6 @@
           <q-btn icon="refresh" round color="primary" @click="refreshData" :loading="refreshing" />
         </div>
 
-        <!-- Contenido dinámico basado en el modo seleccionado -->
         <template v-if="chartDisplayMode === 'chart'">
           <div class="row q-gutter-sm q-mt-md items-center">
             <q-select
@@ -131,13 +137,13 @@
               v-if="chartFormat === 'svg' && svgContent"
               :data="svgDataUrl"
               type="image/svg+xml"
-              class="full-width"
+              class="chart-content"
               style="height: 400px"
             />
             <img
               v-else-if="chartFormat === 'png' && pngUrl"
               :src="pngUrl"
-              class="full-width"
+              class="chart-content"
               style="height: 400px; object-fit: contain"
               alt="Gráfico de métricas"
             />
@@ -165,7 +171,6 @@
       </q-card-section>
     </q-card>
 
-    <!-- Gráfico de Tendencias -->
     <RentalsTrendCard :trends="rentalTrends" class="q-mt-md" :loading="loading" />
   </q-page>
 </template>
@@ -185,7 +190,6 @@ const router = useRouter()
 
 // Estado del componente
 const loading = ref(false)
-const exporting = ref(false)
 const downloading = ref(false)
 const chartLoading = ref(false)
 const refreshing = ref(false)
@@ -244,9 +248,9 @@ const svgDataUrl = computed(() =>
 )
 
 const formattedRevenue = computed(() =>
-  new Intl.NumberFormat('es-MX', {
+  new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'MXN',
+    currency: 'USD',
   }).format(totalRevenue.value),
 )
 
@@ -311,31 +315,6 @@ async function refreshData() {
   }
 }
 
-async function exportMetrics(format) {
-  exporting.value = true
-  try {
-    const headers = ['Métrica', 'Valor']
-    const data = [
-      ['Total de Alquileres', totalRentals.value],
-      ['Ingresos Totales', formattedRevenue.value],
-      ['Vehículos Únicos', uniqueVehicles.value],
-      ['Vehículo Más Alquilado', mostRentedVehicleLabel.value],
-      ['Nuevos Clientes', newCustomers.value],
-    ]
-
-    const blob = await ReportService.exportGenericTable({ headers, data, format })
-    downloadFile(blob, format, 'metricas_generales')
-    $q.notify({
-      type: 'positive',
-      message: 'Métricas exportadas correctamente',
-    })
-  } catch (error) {
-    handleError(error, 'Error exportando métricas')
-  } finally {
-    exporting.value = false
-  }
-}
-
 async function generateCustomReport() {
   downloading.value = true
   try {
@@ -389,6 +368,28 @@ async function loadChart() {
     }
   } finally {
     chartLoading.value = false
+  }
+}
+
+async function downloadMetrics(format) {
+  downloading.value = true
+  try {
+    const params = ReportService.buildMetricsExportParams(
+      format,
+      period.value,
+      startDate.value,
+      endDate.value,
+    )
+    const reportData = await ReportService.exportReport(params)
+    downloadFile(reportData, format, `metricas_generales_${format.toLowerCase()}`)
+    $q.notify({
+      type: 'positive',
+      message: `Métricas descargadas correctamente en formato ${format}`,
+    })
+  } catch (error) {
+    handleError(error, `Error al descargar métricas en formato ${format}`)
+  } finally {
+    downloading.value = false
   }
 }
 
@@ -469,9 +470,18 @@ onMounted(() => {
 
 .chart-container {
   min-height: 400px;
+  max-height: 480px;
+  overflow-y: auto;
   border: 1px solid #eee;
   border-radius: 4px;
   background-color: #f9f9f9;
+}
+
+.chart-content {
+  width: 100%;
+  max-width: 100%;
+  height: 100%;
+  object-fit: contain;
 }
 
 .loading-overlay {
@@ -483,7 +493,6 @@ onMounted(() => {
   background-color: rgba(255, 255, 255, 0.7);
   display: flex;
   justify-content: center;
-  align-items: center;
   z-index: 1000;
 }
 </style>
