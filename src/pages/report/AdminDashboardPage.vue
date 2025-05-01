@@ -6,10 +6,9 @@
 
     <MetricFilter @update-filters="handleFiltersUpdate" :loading="loading" />
 
-    <!-- Loading general -->
     <q-inner-loading :showing="loading" label="Cargando métricas..." label-class="text-primary" />
 
-    <div class="metrics-container q-mt-md">
+    <div class="metrics-container q-mt-md" aria-live="polite">
       <MetricCard
         title="Total de Alquileres"
         :value="totalRentals"
@@ -43,7 +42,6 @@
       />
     </div>
 
-    <!-- Sección de Reportes -->
     <q-card class="q-mt-md">
       <q-card-section>
         <div class="text-h6">Generar Reporte</div>
@@ -83,7 +81,6 @@
         </div>
       </q-card-section>
 
-      <!-- Descargas rápidas -->
       <q-card-actions class="q-px-md q-pb-md">
         <q-btn
           color="secondary"
@@ -103,7 +100,6 @@
       </q-card-actions>
     </q-card>
 
-    <!-- Visualización de Datos -->
     <q-card class="q-mt-md">
       <q-card-section>
         <div class="text-h6 q-mb-sm">Visualización de Datos</div>
@@ -114,26 +110,33 @@
           <q-btn icon="refresh" round color="primary" @click="refreshData" :loading="refreshing" />
         </div>
 
-        <!-- Gráfico -->
         <template v-if="chartDisplayMode === 'chart'">
-          <RentalsTrendCard :trends="rentalTrends" :loading="chartLoading" class="q-mt-md" />
+          <RentalsTrendCard
+            v-if="rentalTrends.length"
+            :trends="rentalTrends"
+            :loading="chartLoading"
+            class="q-mt-md"
+          />
+          <div v-else class="text-center q-pa-md text-grey">
+            No hay datos disponibles para graficar
+          </div>
         </template>
 
-        <!-- Tabla -->
         <template v-else>
           <q-table
-            v-if="rentalTrends.length > 0"
+            v-if="rentalTrends.length"
             class="q-mt-md"
             :rows="rentalTrends"
             :columns="tableColumns"
             row-key="period"
+            :pagination="{ rowsPerPage: 10 }"
             :loading="loading"
             flat
             bordered
           >
-            <template v-slot:body-cell-value="props">
+            <template v-slot:body-cell-rentalCount="props">
               <q-td :props="props">
-                {{ Number(props.row.rentalCount).toLocaleString() }}
+                {{ props.row.rentalCount.toLocaleString() }}
               </q-td>
             </template>
           </q-table>
@@ -160,32 +163,34 @@ const router = useRouter()
 const loading = ref(false)
 const downloading = ref(false)
 const refreshing = ref(false)
+const lastFetchParams = ref(null)
 
 // Datos principales
 const totalRentals = ref(0)
 const totalRevenue = ref(0)
 const uniqueVehicles = ref(0)
-const mostRentedVehicle = ref({})
+const mostRentedVehicle = ref({ brand: '', model: '', count: 0 })
 const newCustomers = ref(0)
 const rentalTrends = ref([])
 
-// Filtros
+// Filtros y configuración
 const period = ref('MONTHLY')
 const startDate = ref(null)
 const endDate = ref(null)
-
-// Reportes
 const reportFormat = ref('PDF')
 const selectedReportType = ref('RENTAL_SUMMARY')
 const chartDisplayMode = ref('chart')
 
-// Configuraciones
+// Opciones de configuración
 const reportTypeOptions = [
   { label: 'Resumen de Rentas', value: 'RENTAL_SUMMARY' },
-  { label: 'Reporte Financiero', value: 'FINANCIAL_REPORT' },
-  { label: 'Reporte de Vehículos', value: 'VEHICLE_REPORT' },
+  { label: 'Reporte Financiero', value: 'REVENUE_ANALYSIS' },
+  { label: 'Reporte de Vehículos', value: 'VEHICLE_USAGE' },
   { label: 'Actividad de Clientes', value: 'CUSTOMER_ACTIVITY' },
+  { label: 'Tendencia de Alquileres', value: 'RENTAL_TRENDS' },
 ]
+
+const ALLOWED_PERIODS = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']
 
 const reportFormatOptions = [
   { label: 'PDF', value: 'PDF' },
@@ -194,39 +199,54 @@ const reportFormatOptions = [
 
 const tableColumns = [
   { name: 'period', label: 'Período', field: 'period', align: 'left' },
-  { name: 'value', label: 'Alquileres', field: 'rentalCount', align: 'right' },
+  {
+    name: 'rentalCount',
+    label: 'Alquileres',
+    field: 'rentalCount',
+    align: 'right',
+    format: (val) => val.toLocaleString(),
+  },
 ]
 
 // Computed
 const mostRentedVehicleLabel = computed(() => {
   if (!mostRentedVehicle.value.brand) return 'N/A'
-  return `${mostRentedVehicle.value.brand} ${mostRentedVehicle.value.model} (${mostRentedVehicle.value.count || 0})`
+  return `${mostRentedVehicle.value.brand} ${mostRentedVehicle.value.model} (${mostRentedVehicle.value.count})`
 })
 
 // Métodos
 async function loadData() {
-  loading.value = true
   try {
-    const params = buildQueryParams()
+    const currentParams = buildQueryParams()
+    if (JSON.stringify(lastFetchParams.value) === JSON.stringify(currentParams)) return
 
+    loading.value = true
     const [rentals, revenue, vehicles, mostRented, customers, trends] = await Promise.all([
-      ReportService.getTotalRentalsMetric(params),
-      ReportService.getTotalRevenueMetric(params),
-      ReportService.getUniqueVehiclesRentedMetric(params),
-      ReportService.getMostRentedVehicleMetric(params),
-      ReportService.getNewCustomersCountMetric(params),
-      ReportService.getRentalTrendsMetric(params),
+      ReportService.getTotalRentalsMetric(currentParams),
+      ReportService.getTotalRevenueMetric(currentParams),
+      ReportService.getUniqueVehiclesRentedMetric(currentParams),
+      ReportService.getMostRentedVehicleMetric(currentParams),
+      ReportService.getNewCustomersCountMetric(currentParams),
+      ReportService.getRentalTrendsMetric(currentParams),
     ])
 
-    totalRentals.value = rentals
-    totalRevenue.value = parseFloat(revenue) || 0
-    uniqueVehicles.value = vehicles
-    mostRentedVehicle.value = mostRented
-    newCustomers.value = customers
-    rentalTrends.value = trends.map((t) => ({
-      period: t.period,
-      rentalCount: t.rentalCount || 0,
-    }))
+    totalRentals.value = Number(rentals) || 0
+    totalRevenue.value = Number(revenue) || 0
+    uniqueVehicles.value = Number(vehicles) || 0
+    newCustomers.value = Number(customers) || 0
+    rentalTrends.value =
+      trends.map((t) => ({
+        period: t.period || 'Sin Periodo',
+        rentalCount: Number(t.rentalCount) || 0,
+      })) || []
+
+    mostRentedVehicle.value = {
+      brand: mostRented?.brand || 'N/A',
+      model: mostRented?.model || '',
+      count: Number(mostRented?.count) || 0,
+    }
+
+    lastFetchParams.value = currentParams
   } catch (error) {
     handleError(error, 'Error cargando datos')
   } finally {
@@ -283,46 +303,60 @@ async function downloadMetrics(format) {
 }
 
 function buildQueryParams() {
-  const params = {
-    period: period.value || 'MONTHLY',
-    startDate: startDate.value ? formatDate(startDate.value) : null,
-    endDate: endDate.value ? formatDate(endDate.value) : null,
-  }
-  Object.keys(params).forEach((key) => {
-    if (params[key] === null || params[key] === undefined) {
-      delete params[key]
-    }
-  })
-
-  return params
+  return Object.fromEntries(
+    Object.entries({
+      period: ALLOWED_PERIODS.includes(period.value) ? period.value : 'MONTHLY',
+      startDate: formatDateISO(startDate.value),
+      endDate: formatDateISO(endDate.value),
+    }).filter(([, value]) => value !== null && value !== undefined), // Quitar coma sobrante aquí
+  )
 }
 
-function formatDate(dateString) {
-  if (!dateString) return null
-  try {
-    const date = new Date(dateString)
-    return date.toISOString().split('T')[0]
-  } catch {
-    return null
+function downloadFile(blobData, format, baseName) {
+  if (!(blobData instanceof Blob)) {
+    handleError(new Error('Tipo de dato inválido para descarga'), 'Error en descarga')
+    return
   }
-}
 
-function downloadFile(data, format, baseName) {
-  const mimeType =
-    format === 'PDF'
-      ? 'application/pdf'
-      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  if (blobData.size === 0) {
+    handleError(new Error('El archivo recibido está vacío'), 'Error en descarga')
+    return
+  }
 
-  const extension = format === 'PDF' ? 'pdf' : 'xlsx'
+  const extensionMap = {
+    PDF: 'pdf',
+    EXCEL: 'xlsx',
+    CHART_PNG: 'png',
+    CHART_SVG: 'svg',
+  }
+
+  const mimeTypes = {
+    PDF: 'application/pdf',
+    EXCEL: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    CHART_PNG: 'image/png',
+    CHART_SVG: 'image/svg+xml',
+  }
+
+  const extension = extensionMap[format] || 'bin'
+  const mimeType = mimeTypes[format] || 'application/octet-stream'
+
+  const blob = new Blob([blobData], { type: mimeType })
   const filename = `${baseName}_${new Date().toISOString().slice(0, 10)}.${extension}`
+  const url = window.URL.createObjectURL(blob)
 
-  const blob = new Blob([data], { type: mimeType })
   const link = document.createElement('a')
-  link.href = URL.createObjectURL(blob)
+  link.href = url
   link.download = filename
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+function formatDateISO(dateString) {
+  if (!dateString) return null
+  const date = new Date(dateString)
+  return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0]
 }
 
 function handleError(error, message) {

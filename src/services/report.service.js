@@ -1,229 +1,176 @@
 // src/services/report.service.js
 import { api, API_CONSTANTS } from '../boot/axios'
 
-/**
- * Función auxiliar para hacer peticiones API con mejor manejo de errores y depuración
- * @param {string} url - URL del endpoint
- * @param {Object} params - Parámetros de la petición
- * @param {Object} options - Opciones adicionales
- * @returns {Promise} - Promesa con la respuesta
- */
-async function makeApiRequest(url, params = {}, options = {}) {
+const ALLOWED_FORMATS = ['PDF', 'EXCEL', 'CHART_PNG', 'CHART_SVG']
+const ALLOWED_REPORT_TYPES = [
+  'RENTAL_SUMMARY',
+  'REVENUE_ANALYSIS',
+  'VEHICLE_USAGE',
+  'CUSTOMER_ACTIVITY',
+  'GENERIC_METRICS',
+  'RENTAL_TRENDS',
+]
+
+async function makeApiRequest(endpoint, params = {}, options = {}) {
   try {
-    // Registrar la petición para depuración
-    console.log(`[API Request] ${url}`, { params })
+    console.debug(`[API] Calling ${endpoint}`, params)
 
-    const config = {
+    const response = await api.get(endpoint, {
+      params: { ...params, _t: Date.now() },
       ...options,
-      params: params,
-    }
-
-    // Agregar timestamp para evitar problemas de caché (304)
-    if (!params._t) {
-      params._t = Date.now()
-    }
-
-    const response = await api.get(url, config)
-
-    // Registrar la respuesta exitosa
-    console.log(`[API Response] ${url}`, { status: response.status, data: response.data })
-    return response.data
-  } catch (error) {
-    // Registrar el error con información detallada
-    console.error(`[API Error] ${url}`, {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      params: params,
-      message: error.message,
     })
 
-    // Manejar errores específicos
-    if (error.response?.status === 304) {
-      console.warn('Respuesta de caché (304), intentando forzar nueva petición')
-      // Forzar nueva petición invalidando la caché
-      params._t = Date.now()
-      return makeApiRequest(url, params, options)
-    }
-
+    console.debug(`[API] Success ${endpoint}`, response.data)
+    return response.data
+  } catch (error) {
+    console.error(`[API Error] ${endpoint}`, {
+      status: error.response?.status,
+      data: error.response?.data,
+      params,
+    })
     throw error
   }
 }
 
 export default {
   // Métricas principales
-  async getTotalRentalsMetric(params = {}) {
+  async getTotalRentalsMetric(params) {
     return makeApiRequest(
       `${API_CONSTANTS.REPORTS_ROUTE}/metrics/total-rentals`,
       this.sanitizeParams(params),
     )
   },
 
-  async getTableData(params = {}) {
-    return makeApiRequest(`${API_CONSTANTS.REPORTS_ROUTE}`, this.sanitizeParams(params))
-  },
-
-  async getTotalRevenueMetric(params = {}) {
-    return makeApiRequest(
+  async getTotalRevenueMetric(params) {
+    const result = await makeApiRequest(
       `${API_CONSTANTS.REPORTS_ROUTE}/metrics/total-revenue`,
       this.sanitizeParams(params),
     )
+    return parseFloat(result) || 0
   },
 
-  async getUniqueVehiclesRentedMetric(params = {}) {
+  async getUniqueVehiclesRentedMetric(params) {
     return makeApiRequest(
       `${API_CONSTANTS.REPORTS_ROUTE}/metrics/unique-vehicles`,
       this.sanitizeParams(params),
     )
   },
 
-  async getMostRentedVehicleMetric(params = {}) {
+  async getMostRentedVehicleMetric(params) {
     return makeApiRequest(
       `${API_CONSTANTS.REPORTS_ROUTE}/metrics/most-rented-vehicle`,
       this.sanitizeParams(params),
     )
   },
 
-  async getNewCustomersCountMetric(params = {}) {
+  async getNewCustomersCountMetric(params) {
     return makeApiRequest(
       `${API_CONSTANTS.REPORTS_ROUTE}/metrics/new-customers`,
       this.sanitizeParams(params),
     )
   },
 
-  async getRentalTrendsMetric(params = {}) {
-    return makeApiRequest(
+  async getRentalTrendsMetric(params) {
+    const data = await makeApiRequest(
       `${API_CONSTANTS.REPORTS_ROUTE}/metrics/rental-trends`,
       this.sanitizeParams(params, true),
-    ) // Incluye period
-  },
-
-  async getVehicleUsageMetric(params = {}) {
-    return makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/vehicle-usage`,
-      this.sanitizeParams(params),
     )
+    return Array.isArray(data) ? data : []
   },
 
   // Exportación de reportes
-  async exportReport(params = {}) {
+  async exportReport(params) {
+    const validatedParams = this.validateExportParams(params)
     try {
-      // Validar parámetros críticos
-      if (!params.format || !params.reportType) {
-        throw new Error('El formato y el tipo de reporte son requeridos')
-      }
-
-      const sanitizedParams = this.sanitizeParams(params, true)
-      const responseType = this.getResponseType(params.format)
-
-      console.log(
-        `[Export Request] format=${params.format}, reportType=${params.reportType}, responseType=${responseType}`,
-        sanitizedParams,
-      )
-
+      console.log('[API Request - exportReport] Params:', validatedParams) // Log de los parámetros enviados
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/export`, {
-        params: sanitizedParams,
-        responseType: responseType,
+        params: validatedParams,
+        responseType: this.getResponseType(validatedParams.format),
       })
-
+      console.log('[API Response - exportReport] Status:', response.status) // Log del código de estado de la respuesta
+      console.log('[API Response - exportReport] Headers:', response.headers) // Log de los headers de la respuesta
+      console.log('[API Response - exportReport] Data (Blob):', response.data) // Log del objeto Blob recibido
+      this.validateBlob(response.data, validatedParams.format) // Validación del Blob
       return response.data
     } catch (error) {
-      console.error('Error exportando reporte:', error)
+      console.error('[API Error - exportReport]', error) // Log del error completo
       throw error
     }
   },
 
-  // Métodos auxiliares mejorados
+  // Métodos auxiliares
   sanitizeParams(params, includePeriod = false) {
-    const sanitized = {}
+    // Validación de fechas
+    let startDate = this.formatDate(params.startDate)
+    let endDate = this.formatDate(params.endDate)
 
-    // Sanitizar y dar formato a las fechas
-    if (params.startDate) {
-      sanitized.startDate = this.formatDateParam(params.startDate)
+    // Asegurar startDate <= endDate
+    if (startDate && endDate) {
+      const start = new Date(startDate)
+      const end = new Date(endDate)
+      if (start > end) [startDate, endDate] = [endDate, startDate]
     }
 
-    if (params.endDate) {
-      sanitized.endDate = this.formatDateParam(params.endDate)
+    const sanitized = {
+      startDate,
+      endDate,
+      period: includePeriod ? params.period || 'MONTHLY' : undefined,
+      chartType: ['CHART_PNG', 'CHART_SVG'].includes(params.format)
+        ? params.chartType || 'bar'
+        : undefined,
     }
 
-    // Validar y asegurar que startDate <= endDate
-    if (sanitized.startDate && sanitized.endDate) {
-      const start = new Date(sanitized.startDate)
-      const end = new Date(sanitized.endDate)
-
-      if (start > end) {
-        // Intercambiar fechas si están en orden incorrecto
-        ;[sanitized.startDate, sanitized.endDate] = [sanitized.endDate, sanitized.startDate]
-      }
-    }
-
-    // Verificar el período
-    if (includePeriod && params.period) {
-      // Validar que el período es uno de los valores permitidos
-      const allowedPeriods = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']
-      sanitized.period = allowedPeriods.includes(params.period) ? params.period : 'MONTHLY'
-    }
-
-    // Copiar el resto de parámetros con validación
-    if (params.format) sanitized.format = params.format
-    if (params.reportType) sanitized.reportType = params.reportType
-    if (params.chartType) {
-      // Validar tipo de gráfico
-      const allowedChartTypes = ['bar', 'line', 'pie', 'area']
-      sanitized.chartType = allowedChartTypes.includes(params.chartType) ? params.chartType : 'bar'
-    }
-
-    // Agregar timestamp para evitar problemas de caché
-    sanitized._t = Date.now()
-
-    return sanitized
+    // Eliminar valores undefined/null
+    return Object.fromEntries(
+      Object.entries(sanitized).filter(([, v]) => v !== undefined && v !== null),
+    )
   },
 
-  // Método para formatear correctamente las fechas
-  formatDateParam(dateValue) {
-    if (!dateValue) return null
+  validateExportParams(params) {
+    if (!ALLOWED_FORMATS.includes(params.format)) {
+      throw new Error(`Formato no soportado: ${params.format}`)
+    }
 
-    try {
-      // Si ya es una fecha en formato string ISO
-      if (typeof dateValue === 'string' && dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        return dateValue
-      }
+    if (!ALLOWED_REPORT_TYPES.includes(params.reportType)) {
+      throw new Error(`Tipo de reporte inválido: ${params.reportType}`)
+    }
 
-      // Si es un objeto Date o un string con formato diferente
-      const date = new Date(dateValue)
-      if (isNaN(date.getTime())) {
-        console.warn('Fecha inválida:', dateValue)
-        return null
-      }
-
-      // Formato YYYY-MM-DD
-      return date.toISOString().split('T')[0]
-    } catch (error) {
-      console.error('Error al formatear fecha:', error)
-      return null
+    return {
+      format: params.format,
+      reportType: params.reportType,
+      ...this.sanitizeParams(params, true),
     }
   },
 
   getResponseType(format) {
-    switch (format) {
-      case 'PDF':
-      case 'EXCEL':
-      case 'CHART_PNG':
-        return 'blob'
-      case 'CHART_SVG':
-        return 'text'
-      default:
-        return 'json'
-    }
+    return ['PDF', 'EXCEL', 'CHART_PNG', 'CHART_SVG'].includes(format) ? 'blob' : 'json'
   },
 
-  buildMetricsExportParams(format, period, startDate, endDate) {
-    return {
-      format: format,
-      reportType: 'GENERIC_METRICS', // Definiremos este reportType en el backend
-      period: period,
-      startDate: startDate,
-      endDate: endDate,
+  formatDate(date) {
+    if (!date) return null
+    const d = new Date(date)
+    return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0]
+  },
+
+  // Método adicional para validar blobs
+  validateBlob(blobData, format) {
+    if (!(blobData instanceof Blob)) {
+      throw new Error('Respuesta no es un archivo válido')
+    }
+
+    if (blobData.size === 0) {
+      throw new Error('El archivo recibido está vacío')
+    }
+
+    const expectedTypes = {
+      PDF: 'application/pdf',
+      EXCEL: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      CHART_PNG: 'image/png',
+      CHART_SVG: 'image/svg+xml',
+    }
+
+    if (blobData.type !== expectedTypes[format]) {
+      console.warn(`Tipo MIME inesperado: ${blobData.type} para formato ${format}`)
     }
   },
 }
