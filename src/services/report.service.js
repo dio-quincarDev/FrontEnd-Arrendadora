@@ -7,6 +7,7 @@ const ALLOWED_REPORT_TYPES = [
   'REVENUE_ANALYSIS',
   'VEHICLE_USAGE',
   'CUSTOMER_ACTIVITY',
+  'MOST_RENTED_VEHICLES',
   'GENERIC_METRICS',
   'RENTAL_TRENDS',
 ]
@@ -14,12 +15,10 @@ const ALLOWED_REPORT_TYPES = [
 async function makeApiRequest(endpoint, params = {}, options = {}) {
   try {
     console.debug(`[API] Calling ${endpoint}`, params)
-
     const response = await api.get(endpoint, {
       params: { ...params, _t: Date.now() },
       ...options,
     })
-
     console.debug(`[API] Success ${endpoint}`, response.data)
     return response.data
   } catch (error) {
@@ -33,7 +32,6 @@ async function makeApiRequest(endpoint, params = {}, options = {}) {
 }
 
 export default {
-  // Métricas principales
   async getTotalRentalsMetric(params) {
     return makeApiRequest(
       `${API_CONSTANTS.REPORTS_ROUTE}/metrics/total-rentals`,
@@ -78,33 +76,29 @@ export default {
     return Array.isArray(data) ? data : []
   },
 
-  // Exportación de reportes
   async exportReport(params) {
     const validatedParams = this.validateExportParams(params)
     try {
-      console.log('[API Request - exportReport] Params:', validatedParams) // Log de los parámetros enviados
+      console.log('[API Request - exportReport] Params:', validatedParams)
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/export`, {
         params: validatedParams,
         responseType: this.getResponseType(validatedParams.format),
       })
-      console.log('[API Response - exportReport] Status:', response.status) // Log del código de estado de la respuesta
-      console.log('[API Response - exportReport] Headers:', response.headers) // Log de los headers de la respuesta
-      console.log('[API Response - exportReport] Data (Blob):', response.data) // Log del objeto Blob recibido
-      this.validateBlob(response.data, validatedParams.format) // Validación del Blob
+      console.log('[API Response - exportReport] Status:', response.status)
+      console.log('[API Response - exportReport] Headers:', response.headers)
+      console.log('[API Response - exportReport] Data (Blob):', response.data)
+      this.validateBlob(response.data, validatedParams.format)
       return response.data
     } catch (error) {
-      console.error('[API Error - exportReport]', error) // Log del error completo
+      console.error('[API Error - exportReport]', error)
       throw error
     }
   },
 
-  // Métodos auxiliares
   sanitizeParams(params, includePeriod = false) {
-    // Validación de fechas
     let startDate = this.formatDate(params.startDate)
     let endDate = this.formatDate(params.endDate)
 
-    // Asegurar startDate <= endDate
     if (startDate && endDate) {
       const start = new Date(startDate)
       const end = new Date(endDate)
@@ -120,7 +114,6 @@ export default {
         : undefined,
     }
 
-    // Eliminar valores undefined/null
     return Object.fromEntries(
       Object.entries(sanitized).filter(([, v]) => v !== undefined && v !== null),
     )
@@ -152,7 +145,6 @@ export default {
     return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0]
   },
 
-  // Método adicional para validar blobs
   validateBlob(blobData, format) {
     if (!(blobData instanceof Blob)) {
       throw new Error('Respuesta no es un archivo válido')

@@ -183,11 +183,12 @@ const chartDisplayMode = ref('chart')
 
 // Opciones de configuración
 const reportTypeOptions = [
+  { label: 'Reporte de Vehículos', value: 'VEHICLE_USAGE' },
+  { label: 'Vehiculos Mas Rentados', value: 'MOST_RENTED_VEHICLES' },
+  { label: 'Actividad de Clientes', value: 'CUSTOMER_ACTIVITY' },
   { label: 'Resumen de Rentas', value: 'RENTAL_SUMMARY' },
   { label: 'Reporte Financiero', value: 'REVENUE_ANALYSIS' },
-  { label: 'Reporte de Vehículos', value: 'VEHICLE_USAGE' },
-  { label: 'Actividad de Clientes', value: 'CUSTOMER_ACTIVITY' },
-  { label: 'Tendencia de Alquileres', value: 'RENTAL_TRENDS' },
+  { label: 'Tendencias de Reporte', value: 'RENTAL_TRENDS ' },
 ]
 
 const ALLOWED_PERIODS = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']
