@@ -11,87 +11,65 @@ const ALLOWED_REPORT_TYPES = [
   'GENERIC_METRICS',
   'RENTAL_TRENDS',
 ]
+const DEFAULT_PERIOD = 'ALL_TIME'
+const CACHE_TTL = 300000 // 5 minutos
 
-async function makeApiRequest(endpoint, params = {}, options = {}) {
-  try {
-    console.debug(`[API] Calling ${endpoint}`, params)
-    const response = await api.get(endpoint, {
-      params: { ...params, _t: Date.now() },
-      ...options,
-    })
-    console.debug(`[API] Success ${endpoint}`, response.data)
-    return response.data
-  } catch (error) {
-    console.error(`[API Error] ${endpoint}`, {
-      status: error.response?.status,
-      data: error.response?.data,
-      params,
-    })
-    throw error
-  }
-}
+const responseCache = new Map()
 
 export default {
-  async getTotalRentalsMetric(params) {
-    return makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/total-rentals`,
-      this.sanitizeParams(params),
-    )
+  async getDashboardData(params = {}) {
+    const cacheKey = `dashboard-${JSON.stringify(params)}`
+    if (responseCache.has(cacheKey)) {
+      const { timestamp, data } = responseCache.get(cacheKey)
+      if (Date.now() - timestamp < CACHE_TTL) return data
+    }
+
+    try {
+      const validatedParams = this.sanitizeParams(params, true)
+      console.debug('[Dashboard] Fetching data with params:', validatedParams)
+      const response = await api.get(API_CONSTANTS.REPORTS_ROUTE, {
+        params: { ...validatedParams, _: Date.now() },
+      })
+
+      const responseData = response.data
+      responseCache.set(cacheKey, { timestamp: Date.now(), data: responseData })
+      return responseData
+    } catch (error) {
+      console.error('[Dashboard Error]', { error: error.message, params })
+      throw new Error('Error al cargar datos del dashboard')
+    }
   },
 
-  async getTotalRevenueMetric(params) {
-    const result = await makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/total-revenue`,
-      this.sanitizeParams(params),
-    )
-    return parseFloat(result) || 0
-  },
-
-  async getUniqueVehiclesRentedMetric(params) {
-    return makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/unique-vehicles`,
-      this.sanitizeParams(params),
-    )
-  },
-
-  async getMostRentedVehicleMetric(params) {
-    return makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/most-rented-vehicle`,
-      this.sanitizeParams(params),
-    )
-  },
-
-  async getNewCustomersCountMetric(params) {
-    return makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/new-customers`,
-      this.sanitizeParams(params),
-    )
-  },
-
-  async getRentalTrendsMetric(params) {
-    const data = await makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/rental-trends`,
+  async getAverageRentalDurationMetric(params) {
+    return this.makeApiRequest(
+      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/average-rental-duration`,
       this.sanitizeParams(params, true),
     )
-    return Array.isArray(data) ? data : []
+  },
+
+  async getCustomerActivityMetric(params) {
+    return this.makeApiRequest(
+      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/customer-activity`,
+      this.sanitizeParams(params, true),
+    )
   },
 
   async exportReport(params) {
     const validatedParams = this.validateExportParams(params)
     try {
-      console.log('[API Request - exportReport] Params:', validatedParams)
+      console.debug('[Export] Generating report:', validatedParams)
       const response = await api.get(`${API_CONSTANTS.REPORTS_ROUTE}/export`, {
         params: validatedParams,
         responseType: this.getResponseType(validatedParams.format),
       })
-      console.log('[API Response - exportReport] Status:', response.status)
-      console.log('[API Response - exportReport] Headers:', response.headers)
-      console.log('[API Response - exportReport] Data (Blob):', response.data)
       this.validateBlob(response.data, validatedParams.format)
       return response.data
     } catch (error) {
-      console.error('[API Error - exportReport]', error)
-      throw error
+      console.error('[Export Error]', {
+        error: error.response?.data || error.message,
+        params: validatedParams,
+      })
+      throw new Error(this.getExportErrorMessage(error))
     }
   },
 
@@ -108,26 +86,24 @@ export default {
     const sanitized = {
       startDate,
       endDate,
-      period: includePeriod ? params.period || 'MONTHLY' : undefined,
-      chartType: ['CHART_PNG', 'CHART_SVG'].includes(params.format)
-        ? params.chartType || 'bar'
-        : undefined,
     }
 
-    return Object.fromEntries(
-      Object.entries(sanitized).filter(([, v]) => v !== undefined && v !== null),
-    )
+    if (includePeriod) sanitized.period = params.period || DEFAULT_PERIOD
+
+    if (['CHART_PNG', 'CHART_SVG'].includes(params.format)) {
+      sanitized.chartType = params.chartType || 'bar'
+    }
+
+    return sanitized
   },
 
   validateExportParams(params) {
     if (!ALLOWED_FORMATS.includes(params.format)) {
       throw new Error(`Formato no soportado: ${params.format}`)
     }
-
     if (!ALLOWED_REPORT_TYPES.includes(params.reportType)) {
       throw new Error(`Tipo de reporte inválido: ${params.reportType}`)
     }
-
     return {
       format: params.format,
       reportType: params.reportType,
@@ -146,13 +122,8 @@ export default {
   },
 
   validateBlob(blobData, format) {
-    if (!(blobData instanceof Blob)) {
-      throw new Error('Respuesta no es un archivo válido')
-    }
-
-    if (blobData.size === 0) {
-      throw new Error('El archivo recibido está vacío')
-    }
+    if (!(blobData instanceof Blob)) throw new Error('Respuesta no es un archivo válido')
+    if (blobData.size === 0) throw new Error('El archivo recibido está vacío')
 
     const expectedTypes = {
       PDF: 'application/pdf',
@@ -163,6 +134,30 @@ export default {
 
     if (blobData.type !== expectedTypes[format]) {
       console.warn(`Tipo MIME inesperado: ${blobData.type} para formato ${format}`)
+    }
+  },
+
+  getExportErrorMessage(error) {
+    if (error.response) {
+      switch (error.response.status) {
+        case 400:
+          return 'Parámetros de reporte inválidos'
+        case 500:
+          return 'Error al generar el reporte en el servidor'
+        default:
+          return `Error ${error.response.status} al descargar el reporte`
+      }
+    }
+    return error.message || 'Error desconocido al descargar el reporte'
+  },
+
+  async makeApiRequest(url, params = {}) {
+    try {
+      const response = await api.get(url, { params: { ...params, _: Date.now() } })
+      return response.data
+    } catch (error) {
+      console.error(`[API Request Error] ${url}`, { error })
+      throw error
     }
   },
 }

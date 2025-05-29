@@ -1,25 +1,53 @@
-// Quasar SCSS (& Sass) Variables
-// --------------------------------------------------
-// To customize the look and feel of this app, you can override
-// the Sass/SCSS variables found in Quasar's source Sass/SCSS files.
+// Variables de Quasar SCSS
+// --------------------------
+// Personalización de colores para la aplicación
 
-// Check documentation for full list of Quasar variables
+$primary: #1976d2;
+$secondary: #26a69a;
+$accent: #9c27b0;
 
-// Your own variables (that are declared here) and Quasar's own
-// ones will be available out of the box in your .vue/.scss/.sass files
+$dark: #1d1d1d;
+$dark-page: #121212;
 
-// It's highly recommended to change the default colors
-// to match your app's branding.
-// Tip: Use the "Theme Builder" on Quasar's documentation website.
+$positive: #21ba45;
+$negative: #c10015;
+$info: #31ccec;
+$warning: #f2c037;
 
-$primary   : #1976D2;
-$secondary : #26A69A;
-$accent    : #9C27B0;
+// 🚀 Soporte para Forced Colors Mode
+@media (forced-colors: active) {
+  $primary: CanvasText;
+  $secondary: ButtonText;
+  $accent: Highlight;
 
-$dark      : #1D1D1D;
-$dark-page : #121212;
+  $dark: Canvas;
+  $dark-page: Canvas;
 
-$positive  : #21BA45;
-$negative  : #C10015;
-$info      : #31CCEC;
-$warning   : #F2C037;
+  $positive: ButtonFace;
+  $negative: ButtonText;
+  $info: LinkText;
+  $warning: ButtonBorder;
+}
+
+// Ajustes de accesibilidad en modo alto contraste
+@media (forced-colors: active) {
+  body {
+    background-color: Canvas;
+    color: CanvasText;
+  }
+
+  .metric-card {
+    background-color: ButtonFace;
+    color: ButtonText;
+  }
+
+  a {
+    color: LinkText;
+  }
+
+  button {
+    background-color: ButtonFace;
+    border-color: ButtonBorder;
+    color: ButtonText;
+  }
+}

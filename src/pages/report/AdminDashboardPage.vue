@@ -1,417 +1,291 @@
+<!-- src/pages/AdminDashboardPage.vue -->
 <template>
-  <q-page padding>
-    <div class="flex items-center justify-between q-mb-md">
-      <div class="text-h4">Panel de Administración</div>
+  <q-page class="admin-dashboard q-pa-lg">
+    <div class="dashboard-header q-mb-xl">
+      <div class="text-h4 text-primary q-mb-md">Dashboard Analítico</div>
+      <metric-filter @update-filters="handleFiltersUpdate" :loading="loading" />
     </div>
 
-    <MetricFilter @update-filters="handleFiltersUpdate" :loading="loading" />
-
-    <q-inner-loading :showing="loading" label="Cargando métricas..." label-class="text-primary" />
-
-    <div class="metrics-container q-mt-md" aria-live="polite">
-      <MetricCard
-        title="Total de Alquileres"
-        :value="totalRentals"
+    <div class="metrics-grid q-mb-xl">
+      <metric-card
+        title="Alquileres Activos"
         icon="directions_car"
+        color="primary"
+        :value="dashboardData.totalRentals"
         :loading="loading"
       />
-      <MetricCard
+      <metric-card
         title="Ingresos Totales"
-        :value="totalRevenue"
-        icon="attach_money"
-        is-currency
+        icon="paid"
+        color="positive"
+        :value="dashboardData.totalRevenue"
+        :isCurrency="true"
         :loading="loading"
       />
-      <MetricCard
-        title="Vehículos Únicos"
-        :value="uniqueVehicles"
+      <metric-card
+        title="Vehículos Disponibles"
         icon="car_rental"
+        color="info"
+        :value="dashboardData.uniqueVehicles"
         :loading="loading"
       />
-      <MetricCard
-        title="Vehículo Más Alquilado"
-        :value="mostRentedVehicleLabel"
-        icon="star"
+      <metric-card
+        title="Clientes Activos"
+        icon="people"
+        color="warning"
+        :value="dashboardData.activeCustomers"
         :loading="loading"
       />
-      <MetricCard
-        title="Nuevos Clientes"
-        :value="newCustomers"
-        icon="person_add"
+      <metric-card
+        title="Duración Promedio (General)"
+        icon="timer"
+        color="accent"
+        :value="formatDuration(dashboardData.averageRentalDuration)"
         :loading="loading"
       />
     </div>
 
-    <q-card class="q-mt-md">
-      <q-card-section>
-        <div class="text-h6">Generar Reporte</div>
-      </q-card-section>
-      <q-card-section class="row q-col-gutter-md">
-        <div class="col-12 col-md-4">
-          <q-select
-            v-model="selectedReportType"
-            :options="reportTypeOptions"
-            label="Tipo de Reporte"
-            outlined
-            emit-value
-            map-options
-            option-value="value"
-            option-label="label"
-          />
-        </div>
-        <div class="col-12 col-md-4">
-          <q-select
-            v-model="reportFormat"
-            :options="reportFormatOptions"
-            label="Formato"
-            outlined
-            emit-value
-            map-options
-          />
-        </div>
-        <div class="col-12 col-md-4 flex items-end">
-          <q-btn
-            color="primary"
-            label="Generar Reporte"
-            @click="generateCustomReport"
-            :loading="downloading"
-            icon="download"
-            class="full-width"
-          />
-        </div>
-      </q-card-section>
-
-      <q-card-actions class="q-px-md q-pb-md">
-        <q-btn
-          color="secondary"
-          label="Excel General"
-          @click="downloadMetrics('EXCEL')"
-          :loading="downloading"
-          icon="download"
+    <div class="row q-col-gutter-lg">
+      <div class="col-6">
+        <rentals-trend-card
+          title="Duración Promedio de Alquiler por Cliente"
+          endpoint="/reports/metrics/average-rental-duration"
+          chartType="bar"
+          :activePeriod="activePeriod"
+          :startDate="startDate"
+          :endDate="endDate"
+          :format="chartFormat"
+          labelsKey="customer"
+          valuesKey="averageDuration"
+          noDataIcon="hourglass_empty"
+          :barChartOptionsOverride="{ indexAxis: 'y' }"
         />
-        <q-btn
-          color="accent"
-          label="PDF General"
-          @click="downloadMetrics('PDF')"
-          :loading="downloading"
-          icon="download"
-          class="q-ml-sm"
+      </div>
+      <div class="col-6">
+        <rentals-trend-card
+          title="Clientes Frecuentes en Alquileres"
+          :chartData="dashboardData.topCustomersByRentals"
+          chartType="bar"
+          :activePeriod="activePeriod"
+          :startDate="startDate"
+          :endDate="endDate"
+          :format="chartFormat"
+          labelsKey="name"
+          valuesKey="rentalCount"
+          noDataIcon="people"
         />
-      </q-card-actions>
-    </q-card>
+      </div>
+      <div class="col-12">
+        <rentals-trend-card
+          title="Actividad de Clientes"
+          :chartData="dashboardData.customerActivity"
+          chartType="scatter"
+          :activePeriod="activePeriod"
+          :startDate="startDate"
+          :endDate="endDate"
+          :format="chartFormat"
+          dataKeyX="rentals"
+          dataKeyY="revenue"
+          noDataIcon="scatter_plot"
+        />
+      </div>
+      <div class="col-6">
+        <rentals-trend-card
+          title="Uso de Vehículos"
+          :chartData="formatVehicleUsageForChart(dashboardData.vehicleUsage)"
+          chartType="bar"
+          :activePeriod="activePeriod"
+          :startDate="startDate"
+          :endDate="endDate"
+          :format="chartFormat"
+          labelsKey="brandModel"
+          valuesKey="usageCount"
+          noDataIcon="directions_car"
+        />
+      </div>
+      <div class="col-6">
+        <rentals-trend-card
+          title="Tendencias de Alquileres"
+          :chartData="dashboardData.rentalTrends"
+          chartType="line"
+          :activePeriod="activePeriod"
+          :startDate="startDate"
+          :endDate="endDate"
+          :format="chartFormat"
+          labelsKey="period"
+          valuesKey="rentalCount"
+          :labelFormatter="formatPeriodLabel"
+          noDataIcon="trending_up"
+        />
+      </div>
+    </div>
 
-    <q-card class="q-mt-md">
+    <q-card class="reports-section q-mt-xl">
       <q-card-section>
-        <div class="text-h6 q-mb-sm">Visualización de Datos</div>
-        <div class="row q-gutter-sm items-center">
-          <q-radio v-model="chartDisplayMode" val="chart" label="Gráfico" />
-          <q-radio v-model="chartDisplayMode" val="table" label="Tabla" />
-          <q-space />
-          <q-btn icon="refresh" round color="primary" @click="refreshData" :loading="refreshing" />
-        </div>
-
-        <template v-if="chartDisplayMode === 'chart'">
-          <RentalsTrendCard
-            v-if="rentalTrends.length"
-            :trends="rentalTrends"
-            :loading="chartLoading"
-            class="q-mt-md"
-          />
-          <div v-else class="text-center q-pa-md text-grey">
-            No hay datos disponibles para graficar
+        <div class="text-h6 q-mb-md">Generación de Reportes</div>
+        <div class="row q-col-gutter-md">
+          <div class="col-12 col-md-4">
+            <q-select
+              v-model="selectedReportType"
+              :options="reportTypeOptions"
+              label="Tipo de Reporte"
+              outlined
+              emit-value
+              map-options
+            />
           </div>
-        </template>
-
-        <template v-else>
-          <q-table
-            v-if="rentalTrends.length"
-            class="q-mt-md"
-            :rows="rentalTrends"
-            :columns="tableColumns"
-            row-key="period"
-            :pagination="{ rowsPerPage: 10 }"
-            :loading="loading"
-            flat
-            bordered
-          >
-            <template v-slot:body-cell-rentalCount="props">
-              <q-td :props="props">
-                {{ props.row.rentalCount.toLocaleString() }}
-              </q-td>
-            </template>
-          </q-table>
-          <div v-else class="text-center q-pa-md text-grey">No hay datos para mostrar</div>
-        </template>
+          <div class="col-12 col-md-8">
+            <div class="row q-col-gutter-sm">
+              <div class="col-6">
+                <q-btn
+                  color="primary"
+                  label="Descargar PDF"
+                  @click="downloadReport('PDF')"
+                  :loading="downloading"
+                  icon="picture_as_pdf"
+                  class="full-width"
+                />
+              </div>
+              <div class="col-6">
+                <q-btn
+                  color="positive"
+                  label="Descargar Excel"
+                  @click="downloadReport('EXCEL')"
+                  :loading="downloading"
+                  icon="table_chart"
+                  class="full-width"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
       </q-card-section>
     </q-card>
   </q-page>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useQuasar } from 'quasar'
-import { useRouter } from 'vue-router'
-import ReportService from 'src/services/report.service'
+import { ref, onMounted } from 'vue'
 import MetricCard from 'src/components/report/MetricCard.vue'
 import RentalsTrendCard from 'src/components/report/RentalsTrendCard.vue'
 import MetricFilter from 'src/components/report/MetricFilter.vue'
+import ReportService from 'src/services/report.service'
+import { useQuasar } from 'quasar'
 
 const $q = useQuasar()
-const router = useRouter()
 
-// Estados reactivos
 const loading = ref(false)
 const downloading = ref(false)
-const refreshing = ref(false)
-const lastFetchParams = ref(null)
-
-// Datos principales
-const totalRentals = ref(0)
-const totalRevenue = ref(0)
-const uniqueVehicles = ref(0)
-const mostRentedVehicle = ref({ brand: '', model: '', count: 0 })
-const newCustomers = ref(0)
-const rentalTrends = ref([])
-
-// Filtros y configuración
-const period = ref('MONTHLY')
-const startDate = ref(null)
+const activePeriod = ref('ALL_TIME') // Cambio aplicado aquí
+const startDate = ref(null) // ← Limpiamos el default para ALL_TIME
 const endDate = ref(null)
-const reportFormat = ref('PDF')
-const selectedReportType = ref('RENTAL_SUMMARY')
-const chartDisplayMode = ref('chart')
+const chartFormat = ref('CHART_PNG')
 
-// Opciones de configuración
-const reportTypeOptions = [
-  { label: 'Reporte de Vehículos', value: 'VEHICLE_USAGE' },
-  { label: 'Vehiculos Mas Rentados', value: 'MOST_RENTED_VEHICLES' },
-  { label: 'Actividad de Clientes', value: 'CUSTOMER_ACTIVITY' },
-  { label: 'Resumen de Rentas', value: 'RENTAL_SUMMARY' },
-  { label: 'Reporte Financiero', value: 'REVENUE_ANALYSIS' },
-  { label: 'Tendencias de Reporte', value: 'RENTAL_TRENDS ' },
-]
-
-const ALLOWED_PERIODS = ['DAILY', 'WEEKLY', 'MONTHLY', 'QUARTERLY', 'YEARLY']
-
-const reportFormatOptions = [
-  { label: 'PDF', value: 'PDF' },
-  { label: 'Excel', value: 'EXCEL' },
-]
-
-const tableColumns = [
-  { name: 'period', label: 'Período', field: 'period', align: 'left' },
-  {
-    name: 'rentalCount',
-    label: 'Alquileres',
-    field: 'rentalCount',
-    align: 'right',
-    format: (val) => val.toLocaleString(),
-  },
-]
-
-// Computed
-const mostRentedVehicleLabel = computed(() => {
-  if (!mostRentedVehicle.value.brand) return 'N/A'
-  return `${mostRentedVehicle.value.brand} ${mostRentedVehicle.value.model} (${mostRentedVehicle.value.count})`
+const dashboardData = ref({
+  totalRentals: 0,
+  totalRevenue: 0,
+  uniqueVehicles: 0,
+  activeCustomers: 0,
+  newCustomers: 0,
+  averageRentalDuration: 0,
+  topCustomersByRentals: [],
+  vehicleUsage: [],
+  customerActivity: [],
+  rentalTrends: [],
+  mostRentedVehicle: {},
 })
 
-// Métodos
-async function loadData() {
+const selectedReportType = ref('RENTAL_SUMMARY')
+
+const reportTypeOptions = [
+  { label: 'Resumen de Alquileres', value: 'RENTAL_SUMMARY' },
+  { label: 'Análisis de Ingresos', value: 'REVENUE_ANALYSIS' },
+  { label: 'Actividad de Clientes', value: 'CUSTOMER_ACTIVITY' },
+  { label: 'Vehículos Más Alquilados', value: 'MOST_RENTED_VEHICLES' },
+]
+
+const handleFiltersUpdate = async (filters) => {
+  activePeriod.value = filters.period
+  startDate.value = filters.startDate
+  endDate.value = filters.endDate
+  chartFormat.value = filters.format
+  await loadDashboardData(filters)
+}
+const loadDashboardData = async (params = {}) => {
+  const resolvedParams = {
+    period: params.period || activePeriod.value,
+    startDate: params.startDate || startDate.value,
+    endDate: params.endDate || endDate.value,
+  }
+
+  loading.value = true
   try {
-    const currentParams = buildQueryParams()
-    if (JSON.stringify(lastFetchParams.value) === JSON.stringify(currentParams)) return
-
-    loading.value = true
-    const [rentals, revenue, vehicles, mostRented, customers, trends] = await Promise.all([
-      ReportService.getTotalRentalsMetric(currentParams),
-      ReportService.getTotalRevenueMetric(currentParams),
-      ReportService.getUniqueVehiclesRentedMetric(currentParams),
-      ReportService.getMostRentedVehicleMetric(currentParams),
-      ReportService.getNewCustomersCountMetric(currentParams),
-      ReportService.getRentalTrendsMetric(currentParams),
-    ])
-
-    totalRentals.value = Number(rentals) || 0
-    totalRevenue.value = Number(revenue) || 0
-    uniqueVehicles.value = Number(vehicles) || 0
-    newCustomers.value = Number(customers) || 0
-    rentalTrends.value =
-      trends.map((t) => ({
-        period: t.period || 'Sin Periodo',
-        rentalCount: Number(t.rentalCount) || 0,
-      })) || []
-
-    mostRentedVehicle.value = {
-      brand: mostRented?.brand || 'N/A',
-      model: mostRented?.model || '',
-      count: Number(mostRented?.count) || 0,
+    const response = await ReportService.getDashboardData(resolvedParams)
+    if (response && typeof response === 'object') {
+      dashboardData.value = {
+        totalRentals: response?.totalRentals ?? 0,
+        totalRevenue: response?.totalRevenue ?? 0,
+        uniqueVehicles: response?.uniqueVehicles ?? 0,
+        activeCustomers: response?.activeCustomers ?? 0,
+        newCustomers: response?.newCustomers ?? 0,
+        averageRentalDuration: response?.averageRentalDuration ?? 0,
+        topCustomersByRentals: response?.topCustomersByRentals ?? [],
+        vehicleUsage: response?.vehicleUsage ?? [],
+        customerActivity: response?.customerActivity ?? [],
+        rentalTrends: response?.rentalTrends ?? [],
+        mostRentedVehicle: response?.mostRentedVehicle ?? {},
+      }
     }
-
-    lastFetchParams.value = currentParams
   } catch (error) {
-    handleError(error, 'Error cargando datos')
+    $q.notify({ type: 'negative', message: 'Error al cargar el dashboard', caption: error.message })
   } finally {
     loading.value = false
   }
 }
 
-async function generateCustomReport() {
+const downloadReport = async (format) => {
   downloading.value = true
   try {
-    const params = {
-      format: reportFormat.value,
+    const response = await ReportService.exportReport({
+      format,
       reportType: selectedReportType.value,
-      ...buildQueryParams(),
-    }
-
-    const reportData = await ReportService.exportReport(params)
-    downloadFile(reportData, params.format, `reporte_${selectedReportType.value}`)
-
-    $q.notify({
-      type: 'positive',
-      message: 'Reporte generado correctamente',
-      icon: 'check_circle',
+      period: activePeriod.value,
+      startDate: startDate.value,
+      endDate: endDate.value,
     })
+    ReportService.downloadFile(response, format, selectedReportType.value.toLowerCase())
+    $q.notify({ type: 'positive', message: 'Reporte descargado exitosamente' })
   } catch (error) {
-    handleError(error, 'Error generando reporte')
+    $q.notify({ type: 'negative', message: 'Error al generar el reporte', caption: error.message })
   } finally {
     downloading.value = false
   }
 }
 
-async function downloadMetrics(format) {
-  downloading.value = true
-  try {
-    const params = {
-      format: format,
-      reportType: 'GENERIC_METRICS',
-      ...buildQueryParams(),
-    }
-
-    const reportData = await ReportService.exportReport(params)
-    downloadFile(reportData, format, `metricas_generales`)
-
-    $q.notify({
-      type: 'positive',
-      message: `Métricas descargadas en formato ${format}`,
-      icon: 'download_done',
-    })
-  } catch (error) {
-    handleError(error, `Error descargando ${format}`)
-  } finally {
-    downloading.value = false
-  }
-}
-
-function buildQueryParams() {
-  return Object.fromEntries(
-    Object.entries({
-      period: ALLOWED_PERIODS.includes(period.value) ? period.value : 'MONTHLY',
-      startDate: formatDateISO(startDate.value),
-      endDate: formatDateISO(endDate.value),
-    }).filter(([, value]) => value !== null && value !== undefined), // Quitar coma sobrante aquí
-  )
-}
-
-function downloadFile(blobData, format, baseName) {
-  if (!(blobData instanceof Blob)) {
-    handleError(new Error('Tipo de dato inválido para descarga'), 'Error en descarga')
-    return
-  }
-
-  if (blobData.size === 0) {
-    handleError(new Error('El archivo recibido está vacío'), 'Error en descarga')
-    return
-  }
-
-  const extensionMap = {
-    PDF: 'pdf',
-    EXCEL: 'xlsx',
-    CHART_PNG: 'png',
-    CHART_SVG: 'svg',
-  }
-
-  const mimeTypes = {
-    PDF: 'application/pdf',
-    EXCEL: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    CHART_PNG: 'image/png',
-    CHART_SVG: 'image/svg+xml',
-  }
-
-  const extension = extensionMap[format] || 'bin'
-  const mimeType = mimeTypes[format] || 'application/octet-stream'
-
-  const blob = new Blob([blobData], { type: mimeType })
-  const filename = `${baseName}_${new Date().toISOString().slice(0, 10)}.${extension}`
-  const url = window.URL.createObjectURL(blob)
-
-  const link = document.createElement('a')
-  link.href = url
-  link.download = filename
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
-}
-
-function formatDateISO(dateString) {
-  if (!dateString) return null
-  const date = new Date(dateString)
-  return isNaN(date.getTime()) ? null : date.toISOString().split('T')[0]
-}
-
-function handleError(error, message) {
-  console.error(message, error)
-  $q.notify({
-    type: 'negative',
-    message,
-    caption: error.response?.data?.message || error.message,
-    position: 'top-right',
+const formatPeriodLabel = (period) => {
+  const [year, month] = period.split('-')
+  return new Date(`${year}-${month}-01`).toLocaleDateString('es-MX', {
+    month: 'short',
+    year: 'numeric',
   })
-
-  // Redirigir si es error de autenticación
-  if (error.response?.status === 401) {
-    router.push('/auth/login?redirect=/reports/dashboard')
-  } else if (error.response?.status === 403) {
-    router.push('/unauthorized')
-  }
 }
 
-// Inicialización
+const formatDuration = (duration) => {
+  const days = Math.floor(duration)
+  return `${days} días`
+}
+
+const formatVehicleUsageForChart = (usage) => {
+  return Array.isArray(usage)
+    ? usage.map((v) => ({ brandModel: v.vehicle, usageCount: v.count }))
+    : []
+}
+
 onMounted(() => {
-  console.log('AdminDashboardPage montado - Iniciando carga de datos')
-  loadData()
+  loadDashboardData({
+    period: activePeriod.value,
+    startDate: startDate.value,
+    endDate: endDate.value,
+  })
 })
 </script>
-
-<style scoped>
-.metrics-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 16px;
-}
-
-.chart-container {
-  height: 400px;
-  min-height: 300px;
-}
-
-.chart-content {
-  width: 100%;
-  max-width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.7);
-  display: flex;
-  justify-content: center;
-  z-index: 1000;
-}
-</style>
