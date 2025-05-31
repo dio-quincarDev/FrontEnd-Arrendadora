@@ -1,7 +1,7 @@
 <template>
   <div class="filter-section q-pa-md">
     <div class="row q-col-gutter-sm items-center">
-      <div class="col-12 col-md-4">
+      <div class="col-12 col-md-4" v-if="period !== 'ALL_TIME'">
         <q-date v-model="dateRange" range mask="YYYY-MM-DD" color="primary" today-btn flat bordered>
           <template v-slot:default>
             <div class="row justify-between">
@@ -87,6 +87,7 @@ const loading = ref(false) // Si necesitas un estado de carga para los filtros
 
 // Opciones de periodo
 const periodOptions = [
+  { label: 'Todo el Tiempo', value: 'ALL_TIME', icon: 'history' },
   { label: 'Diario', value: 'DAILY', icon: 'event_available' },
   { label: 'Semanal', value: 'WEEKLY', icon: 'date_range' },
   { label: 'Mensual', value: 'MONTHLY', icon: 'calendar_month' },
@@ -117,23 +118,31 @@ const setCurrentMonth = () => {
   }
 }
 
+// NUEVO emitFilters
 const emitFilters = () => {
-  if (!dateRange.value.from || !dateRange.value.to) {
-    $q.notify({
-      type: 'negative',
-      message: 'Seleccione un rango de fechas válido',
-      position: 'top',
-    })
-    return
+  let from = null
+  let to = null
+
+  if (period.value !== 'ALL_TIME') {
+    from = dateRange.value.from
+    to = dateRange.value.to
+
+    if (!from || !to) {
+      $q.notify({
+        type: 'negative',
+        message: 'Seleccione un rango de fechas válido',
+        position: 'top',
+      })
+      return
+    }
   }
 
   emit('update-filters', {
-    startDate: dateRange.value.from,
-    endDate: dateRange.value.to,
+    startDate: from,
+    endDate: to,
     period: period.value,
-    // Añadir el parámetro chartType basado en el formato seleccionado
     chartType: ['CHART_PNG', 'CHART_SVG'].includes(format.value) ? 'bar' : undefined,
-    format: format.value, // También pasamos el formato para otros usos si es necesario
+    format: format.value,
   })
 }
 </script>

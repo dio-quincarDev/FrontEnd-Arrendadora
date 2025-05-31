@@ -26,7 +26,7 @@
         title="Vehículos Disponibles"
         icon="car_rental"
         color="info"
-        :value="dashboardData.uniqueVehicles"
+        :value="dashboardData.availableVehicles"
         :loading="loading"
       />
       <metric-card
@@ -106,7 +106,7 @@
       <div class="col-6">
         <rentals-trend-card
           title="Tendencias de Alquileres"
-          :chartData="dashboardData.rentalTrends"
+          :endpoint="reports / metrics / rental - trends"
           chartType="line"
           :activePeriod="activePeriod"
           :startDate="startDate"
@@ -226,6 +226,7 @@ const loadDashboardData = async (params = {}) => {
         totalRentals: response?.totalRentals ?? 0,
         totalRevenue: response?.totalRevenue ?? 0,
         uniqueVehicles: response?.uniqueVehicles ?? 0,
+        availableVehicles: response?.availableVehicles ?? 0,
         activeCustomers: response?.activeCustomers ?? 0,
         newCustomers: response?.newCustomers ?? 0,
         averageRentalDuration: response?.averageRentalDuration ?? 0,

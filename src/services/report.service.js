@@ -151,6 +151,13 @@ export default {
     return error.message || 'Error desconocido al descargar el reporte'
   },
 
+  async getRentalTrendsMetric(params) {
+    return this.makeApiRequest(
+      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/rental-trends`,
+      this.sanitizeParams(params, true),
+    )
+  },
+
   async makeApiRequest(url, params = {}) {
     try {
       const response = await api.get(url, { params: { ...params, _: Date.now() } })

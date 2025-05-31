@@ -80,7 +80,7 @@ import {
   LogarithmicScale,
   ScatterController,
 } from 'chart.js'
-import ReportService from 'src/services/report.service' // Asegúrate de la ruta correcta
+import ReportService from 'src/services/report.service'
 
 ChartJS.register(
   Title,
@@ -96,34 +96,34 @@ ChartJS.register(
 )
 
 const props = defineProps({
-  title: { type: String, required: true },
-  endpoint: { type: String, required: false }, // Ahora no es requerido
-  chartData: { type: Object, default: null }, // Nuevo prop para recibir datos directamente
+  title: String,
+  endpoint: String,
+  chartData: Object,
   chartType: {
     type: String,
     default: 'bar',
-    validator: (value) => ['bar', 'line', 'scatter', 'pie', 'doughnut'].includes(value),
   },
-  activePeriod: { type: String, default: 'MONTHLY' },
-  startDate: { type: String, default: null },
-  endDate: { type: String, default: null },
-  format: { type: String, default: 'CHART_PNG' },
-  labelsKey: { type: String, default: 'period' },
-  valuesKey: { type: String, default: 'value' },
-  dataKeyX: { type: String, default: 'x' }, // Para scatter
-  dataKeyY: { type: String, default: 'y' }, // Para scatter
-  labelFormatter: { type: Function, default: (label) => label },
-  noDataIcon: { type: String, default: 'bar_chart' },
-  barChartOptionsOverride: { type: Object, default: () => ({}) },
-  lineChartOptionsOverride: { type: Object, default: () => ({}) },
-  scatterChartOptionsOverride: { type: Object, default: () => ({}) },
+  activePeriod: String,
+  startDate: String,
+  endDate: String,
+  format: String,
+  labelsKey: String,
+  valuesKey: String,
+  dataKeyX: String,
+  dataKeyY: String,
+  labelFormatter: Function,
+  noDataIcon: String,
+  barChartOptionsOverride: Object,
+  lineChartOptionsOverride: Object,
+  scatterChartOptionsOverride: Object,
 })
 
-const chartDataInternal = ref(null) // Renombrado
+const chartDataInternal = ref(null)
 const scatterData = ref(null)
 const svgChart = ref('')
 const loading = ref(false)
 const currentChartType = computed(() => props.chartType)
+
 const formatChartDataFromProp = (data) => {
   if (!data) return null
 
@@ -134,7 +134,11 @@ const formatChartDataFromProp = (data) => {
     props.valuesKey in data[0]
   ) {
     return {
-      labels: data.map((item) => props.labelFormatter(item[props.labelsKey])),
+      labels: data.map((item) =>
+        typeof props.labelFormatter === 'function'
+          ? props.labelFormatter(item[props.labelsKey])
+          : item[props.labelsKey],
+      ),
       datasets: [
         {
           label: props.title,
@@ -182,6 +186,18 @@ const formatChartDataFromProp = (data) => {
   return null
 }
 
+const applyChartData = (data) => {
+  if (props.format === 'CHART_PNG') {
+    if (props.chartType === 'scatter') {
+      scatterData.value = formatChartDataFromProp(data)
+    } else {
+      chartDataInternal.value = formatChartDataFromProp(data)
+    }
+  } else if (props.format === 'CHART_SVG') {
+    svgChart.value = data
+  }
+}
+
 const fetchChartData = async () => {
   loading.value = true
   chartDataInternal.value = null
@@ -189,7 +205,7 @@ const fetchChartData = async () => {
   svgChart.value = ''
 
   if (props.chartData) {
-    chartDataInternal.value = formatChartDataFromProp(props.chartData)
+    applyChartData(props.chartData)
     loading.value = false
     return
   }
@@ -206,25 +222,8 @@ const fetchChartData = async () => {
 
       let responseData
       switch (props.endpoint) {
-        case '/': // Or API_CONSTANTS.REPORTS_ROUTE if that's different
+        case '/':
           responseData = await ReportService.getDashboardData(params)
-          if (responseData && responseData.customerActivity && props.chartType === 'scatter') {
-            scatterData.value = {
-              datasets: [
-                {
-                  label: props.title,
-                  data: responseData.customerActivity.map((item) => ({
-                    x: item.rentals,
-                    y: item.revenue,
-                  })),
-                  backgroundColor: 'rgba(54, 162, 235, 0.6)',
-                  pointRadius: 5,
-                },
-              ],
-            }
-          } else if (responseData) {
-            chartDataInternal.value = formatChartDataFromProp(responseData)
-          }
           break
         case '/reports/metrics/rental-trends':
           responseData = await ReportService.getRentalTrendsMetric(params)
@@ -244,13 +243,7 @@ const fetchChartData = async () => {
           return
       }
 
-      if (props.format === 'CHART_PNG') {
-        if (props.chartType !== 'scatter') {
-          chartDataInternal.value = formatChartDataFromProp(responseData)
-        }
-      } else if (props.format === 'CHART_SVG') {
-        svgChart.value = responseData
-      }
+      applyChartData(responseData)
     } catch (error) {
       console.error(`Error fetching chart data for ${props.title} (${props.endpoint}):`, error)
     } finally {
@@ -290,7 +283,7 @@ watch(
     startDate: props.startDate,
     endDate: props.endDate,
     format: props.format,
-    chartData: props.chartData, // Observar también el prop chartData
+    chartData: props.chartData,
   }),
   fetchChartData,
   { immediate: true, deep: true },
@@ -316,7 +309,7 @@ watch(
 
 .chart-container {
   position: relative;
-  height: 350px; /* Ajustar altura según sea necesario */
+  height: 350px;
   min-height: 250px;
 }
 
