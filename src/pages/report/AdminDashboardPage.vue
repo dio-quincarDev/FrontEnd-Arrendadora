@@ -106,7 +106,7 @@
       <div class="col-6">
         <rentals-trend-card
           title="Tendencias de Alquileres"
-          :endpoint="reports / metrics / rental - trends"
+          :endpoint="'/reports/metrics/rental-trends'"
           chartType="line"
           :activePeriod="activePeriod"
           :startDate="startDate"

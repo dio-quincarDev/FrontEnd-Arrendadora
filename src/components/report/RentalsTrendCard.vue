@@ -288,6 +288,25 @@ watch(
   fetchChartData,
   { immediate: true, deep: true },
 )
+
+// Agrega estos console.log para inspeccionar los datos
+watch(
+  () => props.chartData,
+  (newChartData) => {
+    console.log('RentalsTrendCard - props.chartData:', newChartData)
+    if (newChartData) {
+      console.log('RentalsTrendCard - Formatted data:', formatChartDataFromProp(newChartData))
+    }
+  },
+  { immediate: true, deep: true },
+)
+
+watch(
+  () => chartDataInternal.value,
+  (newChartDataInternal) => {
+    console.log('RentalsTrendCard - chartDataInternal:', newChartDataInternal)
+  },
+)
 </script>
 
 <style scoped>
