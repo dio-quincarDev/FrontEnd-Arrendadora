@@ -81,7 +81,7 @@ const dateRange = ref({
   from: startOfMonth(new Date()).toISOString().split('T')[0],
   to: endOfMonth(new Date()).toISOString().split('T')[0],
 })
-const period = ref('MONTHLY')
+const period = ref('ALL_TIME')
 const format = ref('CHART_PNG') // Valor por defecto para el formato del gráfico
 const loading = ref(false) // Si necesitas un estado de carga para los filtros
 
