@@ -10,39 +10,42 @@
         <Bar
           v-if="
             currentChartType === 'bar' &&
-            chartDataInternal &&
-            chartDataInternal.datasets &&
-            chartDataInternal.datasets.length > 0 &&
+            internalChartData &&
+            internalChartData.datasets &&
+            internalChartData.datasets.length > 0 &&
             format === 'CHART_PNG'
           "
-          :data="chartDataInternal"
+          :data="internalChartData"
           :options="barChartOptions"
+          :key="chartRenderKey"
           aria-label="Gráfico de barras dinámico"
           role="img"
         />
         <Line
           v-if="
             currentChartType === 'line' &&
-            chartDataInternal &&
-            chartDataInternal.datasets &&
-            chartDataInternal.datasets.length > 0 &&
+            internalChartData &&
+            internalChartData.datasets &&
+            internalChartData.datasets.length > 0 &&
             format === 'CHART_PNG'
           "
-          :data="chartDataInternal"
+          :data="internalChartData"
           :options="lineChartOptions"
+          :key="chartRenderKey"
           aria-label="Gráfico de líneas dinámico"
           role="img"
         />
         <Scatter
           v-if="
             currentChartType === 'scatter' &&
-            scatterData &&
-            scatterData.datasets &&
-            scatterData.datasets.length > 0 &&
+            internalChartData &&
+            internalChartData.datasets &&
+            internalChartData.datasets.length > 0 &&
             format === 'CHART_PNG'
           "
-          :data="scatterData"
+          :data="internalChartData"
           :options="scatterChartOptions"
+          :key="chartRenderKey"
           aria-label="Gráfico de dispersión dinámico"
           role="img"
         />
@@ -118,18 +121,41 @@ const props = defineProps({
   scatterChartOptionsOverride: Object,
 })
 
-const chartDataInternal = ref(null)
-const scatterData = ref(null)
+const internalChartData = ref({ labels: [], datasets: [] })
 const svgChart = ref('')
 const loading = ref(false)
 const currentChartType = computed(() => props.chartType)
+const chartRenderKey = ref(Date.now())
 
 const formatChartDataFromProp = (data) => {
-  if (!data) return null
+  if (!data) return { labels: [], datasets: [] }
 
+  // Scatter
   if (
     Array.isArray(data) &&
     data.length > 0 &&
+    props.dataKeyX &&
+    props.dataKeyY &&
+    props.dataKeyX in data[0] &&
+    props.dataKeyY in data[0]
+  ) {
+    return {
+      datasets: [
+        {
+          label: props.title,
+          data: data.map((item) => ({ x: item[props.dataKeyX], y: item[props.dataKeyY] })),
+          backgroundColor: 'rgba(54, 162, 235, 0.6)',
+          pointRadius: 5,
+        },
+      ],
+    }
+  }
+  // Bar/Line con array de objetos
+  if (
+    Array.isArray(data) &&
+    data.length > 0 &&
+    props.labelsKey &&
+    props.valuesKey &&
     props.labelsKey in data[0] &&
     props.valuesKey in data[0]
   ) {
@@ -151,23 +177,9 @@ const formatChartDataFromProp = (data) => {
         },
       ],
     }
-  } else if (
-    Array.isArray(data) &&
-    data.length > 0 &&
-    props.dataKeyX in data[0] &&
-    props.dataKeyY in data[0]
-  ) {
-    return {
-      datasets: [
-        {
-          label: props.title,
-          data: data.map((item) => ({ x: item[props.dataKeyX], y: item[props.dataKeyY] })),
-          backgroundColor: 'rgba(54, 162, 235, 0.6)',
-          pointRadius: 5,
-        },
-      ],
-    }
-  } else if (typeof data === 'object' && data !== null && Object.keys(data).length > 0) {
+  }
+  // Bar/Line con objeto plano
+  if (typeof data === 'object' && data !== null && Object.keys(data).length > 0) {
     return {
       labels: Object.keys(data),
       datasets: [
@@ -183,16 +195,14 @@ const formatChartDataFromProp = (data) => {
       ],
     }
   }
-  return null
+  return { labels: [], datasets: [] }
 }
 
 const applyChartData = (data) => {
   if (props.format === 'CHART_PNG') {
-    if (props.chartType === 'scatter') {
-      scatterData.value = formatChartDataFromProp(data)
-    } else {
-      chartDataInternal.value = formatChartDataFromProp(data)
-    }
+    const formattedData = formatChartDataFromProp(data)
+    internalChartData.value = { ...(formattedData || { labels: [], datasets: [] }) }
+    chartRenderKey.value = Date.now() // Forzar remount
   } else if (props.format === 'CHART_SVG') {
     svgChart.value = data
   }
@@ -200,8 +210,7 @@ const applyChartData = (data) => {
 
 const fetchChartData = async () => {
   loading.value = true
-  chartDataInternal.value = null
-  scatterData.value = null
+  internalChartData.value = { labels: [], datasets: [] }
   svgChart.value = ''
 
   if (props.chartData) {
@@ -284,6 +293,7 @@ watch(
     endDate: props.endDate,
     format: props.format,
     chartData: props.chartData,
+    chartType: props.chartType,
   }),
   fetchChartData,
   { immediate: true, deep: true },
@@ -302,7 +312,7 @@ watch(
 )
 
 watch(
-  () => chartDataInternal.value,
+  () => internalChartData.value,
   (newChartDataInternal) => {
     console.log('RentalsTrendCard - chartDataInternal:', newChartDataInternal)
   },
