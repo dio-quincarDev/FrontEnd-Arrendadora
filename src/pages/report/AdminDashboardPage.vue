@@ -87,15 +87,15 @@
             >
               <template v-if="!loading">
                 <div v-if="dashboardData.mostRentedVehicle?.brand">
-                  <div class="text-subtitle1">
+                  <div class="text-h5 text-white q-mb-xs">
                     {{ dashboardData.mostRentedVehicle.brand }}
                     {{ dashboardData.mostRentedVehicle.model }}
                   </div>
-                  <div class="text-caption">
+                  <div class="text-caption text-white-7">
                     Alquileres: {{ dashboardData.mostRentedVehicle.rentalCount }}
                   </div>
                 </div>
-                <div v-else class="text-caption text-white-7">No disponible</div>
+                <div v-else class="text-h5 text-white-7 q-mb-xs">No disponible</div>
               </template>
             </metric-card>
           </div>
@@ -175,22 +175,26 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue' // Importa 'ref' para currentFilters
+import { onMounted, ref } from 'vue'
 import useDashboardData from 'src/composables/useDashboardData'
-import MetricCard from 'src/components/report/MetricCard.vue'
+import MetricCard from 'src/components/report/MetricCard.vue' // Asegúrate de que esta ruta sea correcta
 import DynamicChartCard from 'src/components/report/DynamicChartCard.vue'
 import MetricFilter from 'src/components/report/MetricFilter.vue'
-// No necesitas `computed` si no lo usas directamente en el script setup para nuevas propiedades calculadas.
-// Si tus funciones de formato ya son regulares, no necesitan ser `computed`.
 
 // Extrae las propiedades reactivas del composable
 const { dashboardData, loading, downloading, loadDashboardData, downloadReport } =
   useDashboardData()
 
 // Define un ref para los filtros actuales que se pasarán a loadDashboardData
-const currentFilters = ref({ period: 'ALL_TIME', startDate: null, endDate: null })
+// Incluye 'reportType' con un valor por defecto para la descarga de reportes
+const currentFilters = ref({
+  period: 'ALL_TIME',
+  startDate: null,
+  endDate: null,
+  reportType: 'RENTAL_SUMMARY',
+})
 
-// Funciones de normalización para los gráficos (mantenerlas aquí por ahora)
+// Funciones de normalización para los gráficos
 const formatTopCustomersChartData = (data) => {
   if (!Array.isArray(data) || data.length === 0) return { labels: [], datasets: [] }
   return {
@@ -245,16 +249,17 @@ const formatAverageRentalDurationChartData = (data) => {
 
 // Manejador del evento 'update-filters' emitido por MetricFilter
 const handleUpdateFilters = (filters) => {
-  currentFilters.value = filters // Actualiza los filtros reactivos
-  loadDashboardData(currentFilters.value) // Recarga los datos con los nuevos filtros
+  // Cuando se actualizan los filtros, también actualiza el reportType
+  currentFilters.value = { ...filters, reportType: filters.reportType || 'RENTAL_SUMMARY' }
+  loadDashboardData(currentFilters.value)
 }
 
 // Manejador para la descarga de reportes
 const handleDownloadReport = () => {
   downloadReport({
-    format: 'PDF', // Puedes hacer esto dinámico si tienes un select para el formato
-    reportType: 'RENTAL_SUMMARY', // Puedes hacer esto dinámico si tienes un select para el tipo de reporte
-    ...currentFilters.value,
+    format: 'PDF', // El formato es fijo a PDF por ahora, según lo que tu backend soporta
+    reportType: currentFilters.value.reportType, // Usa el tipo de reporte seleccionado en el filtro
+    ...currentFilters.value, // Pasa también las fechas y el periodo
   })
 }
 
@@ -265,5 +270,6 @@ onMounted(() => {
 </script>
 
 <style lang="scss" scoped>
-// Tus estilos CSS/SCSS aquí
+// No hay estilos específicos aquí, ya que la mayoría se manejan en los componentes individuales.
+// Puedes agregar estilos globales si los necesitas para el padding de la página, etc.
 </style>
