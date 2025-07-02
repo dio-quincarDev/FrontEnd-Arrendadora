@@ -7,49 +7,101 @@
       </div>
       <div class="text-h5 q-mb-xs">
         <q-spinner v-if="loading" color="white" size="sm" class="q-mr-sm" />
-        <span v-else>{{ formattedValue }}</span>
+        <span v-else-if="!loading && !hasSlotContent">{{ formattedValue }}</span>
+        <slot v-else />
       </div>
-      <slot />
     </q-card-section>
   </q-card>
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import { computed, useSlots } from 'vue'
 
 const props = defineProps({
   title: { type: String, required: true },
   icon: { type: String, required: false, default: 'insights' },
   color: { type: String, default: '' },
-  value: { type: [Number, String], default: null },
+  value: { type: [Number, String, null], default: null }, // 'value' ya NO espera Objetos aquí
   isCurrency: { type: Boolean, default: false },
   loading: { type: Boolean, default: false },
 })
 
+// Comprobar si hay contenido en el slot predeterminado
+const slots = useSlots()
+const hasSlotContent = computed(() => !!slots.default && slots.default().length > 0)
+
 const formattedValue = computed(() => {
   if (props.loading) return '...'
 
+  // Si es moneda
   if (props.isCurrency) {
     const numericValue = typeof props.value === 'number' ? props.value : Number(props.value)
+    if (
+      isNaN(numericValue) ||
+      props.value === null ||
+      props.value === undefined ||
+      props.value === ''
+    ) {
+      return 'N/A' // Mostrar "N/A" para valores no válidos
+    }
     return new Intl.NumberFormat('es-PA', {
       style: 'currency',
       currency: 'PAB',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 2,
     }).format(numericValue)
   }
 
-  return props.value !== null && props.value !== undefined ? props.value : '--'
+  // Para números o strings normales
+  if (props.value !== null && props.value !== undefined && props.value !== '') {
+    if (typeof props.value === 'number') {
+      if (props.value >= 1000000) return `${(props.value / 1000000).toFixed(1)}M`
+      if (props.value >= 1000) return `${(props.value / 1000).toFixed(1)}k`
+    }
+    return props.value
+  }
+
+  return 'N/A' // Valor por defecto para nulo, indefinido, o cadena vacía
 })
 </script>
 
 <style scoped lang="scss">
 .metric-card {
   border-radius: 12px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(145deg, #ffffff, #f0f0f0);
+  color: #333;
   overflow: hidden;
   transition: transform 0.2s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  justify-content: center; /* Centrar contenido verticalmente si es menor que la altura */
+  height: 130px; /* ¡Altura FIJA para todas las tarjetas! Ajusta este valor si es necesario */
 
   &:hover {
     transform: scale(1.03);
+  }
+  .q-card-section {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* Centrar el contenido dentro de la sección */
+    padding: 12px 16px; /* Reducir un poco el padding si es necesario */
+  }
+  .text-h5 {
+    display: flex;
+    align-items: center;
+    min-height: 28px;
+    line-height: 1.2;
+    margin-bottom: 0px !important; /* Eliminar margen inferior para optimizar espacio */
+  }
+  .text-subtitle2 {
+    line-height: 1.2;
+    margin-bottom: 4px; /* Pequeño margen para el título */
+  }
+  .text-caption {
+    line-height: 1.2;
+    margin-top: 2px; /* Pequeño margen para el caption */
   }
 }
 </style>
