@@ -96,9 +96,8 @@ const periodOptions = [
 
 // Opciones de formato para el gráfico (para el chartType)
 const formatOptions = [
-  { label: 'PNG', value: 'CHART_PNG' },
-  { label: 'SVG', value: 'CHART_SVG' },
-  { label: 'JSON', value: 'CHART_JSON' },
+  { label: 'PDF', value: 'PDF' },
+  { label: 'Excel', value: 'EXCEL' },
 ]
 
 // Métodos
@@ -141,7 +140,6 @@ const emitFilters = () => {
     startDate: from,
     endDate: to,
     period: period.value,
-    chartType: ['CHART_PNG', 'CHART_SVG'].includes(format.value) ? 'bar' : undefined,
     format: format.value,
   })
 }

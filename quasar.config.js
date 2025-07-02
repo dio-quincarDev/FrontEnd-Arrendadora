@@ -10,7 +10,7 @@ export default defineConfig((ctx) => {
     // app boot file (/src/boot)
     // --> boot files are part of "main.js"
     // https://v2.quasar.dev/quasar-cli-vite/boot-files
-    boot: ['i18n', 'axios'], // Asegúrate de que 'quasar-plugins' esté aquí
+    boot: ['i18n', 'axios', 'echarts'], // Asegúrate de que 'quasar-plugins' esté aquí
 
     // https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#css
     css: ['app.scss'],

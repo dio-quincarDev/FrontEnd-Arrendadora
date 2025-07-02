@@ -1,4 +1,3 @@
-// src/services/report.service.js
 import { api, API_CONSTANTS } from '../boot/axios'
 
 const ALLOWED_FORMATS = ['PDF', 'EXCEL', 'CHART_PNG', 'CHART_SVG']
@@ -12,7 +11,7 @@ const ALLOWED_REPORT_TYPES = [
   'RENTAL_TRENDS',
 ]
 const DEFAULT_PERIOD = 'ALL_TIME'
-const CACHE_TTL = 300000 // 5 minutos
+const CACHE_TTL = 300000 // 5 min
 
 const responseCache = new Map()
 
@@ -30,7 +29,6 @@ export default {
       const response = await api.get(API_CONSTANTS.REPORTS_ROUTE, {
         params: { ...validatedParams, _: Date.now() },
       })
-
       const responseData = response.data
       responseCache.set(cacheKey, { timestamp: Date.now(), data: responseData })
       return responseData
@@ -38,27 +36,6 @@ export default {
       console.error('[Dashboard Error]', { error: error.message, params })
       throw new Error('Error al cargar datos del dashboard')
     }
-  },
-
-  async getRentalTrendsMetric(params) {
-    return this.makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/rental-trends`,
-      this.sanitizeParams(params, true),
-    )
-  },
-
-  async getAverageRentalDurationMetric(params) {
-    return this.makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/average-rental-duration`,
-      this.sanitizeParams(params, true),
-    )
-  },
-
-  async getCustomerActivityMetric(params) {
-    return this.makeApiRequest(
-      `${API_CONSTANTS.REPORTS_ROUTE}/metrics/customer-activity`,
-      this.sanitizeParams(params, true),
-    )
   },
 
   async exportReport(params) {
@@ -69,7 +46,7 @@ export default {
         params: validatedParams,
         responseType: this.getResponseType(validatedParams.format),
       })
-      this.validateBlob(response.data, validatedParams.format)
+      this.validateBlob(response.data)
       return response.data
     } catch (error) {
       console.error('[Export Error]', {
@@ -84,23 +61,15 @@ export default {
     let startDate = this.formatDate(params.startDate)
     let endDate = this.formatDate(params.endDate)
 
-    if (startDate && endDate) {
-      const start = new Date(startDate)
-      const end = new Date(endDate)
-      if (start > end) [startDate, endDate] = [endDate, startDate]
+    if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+      ;[startDate, endDate] = [endDate, startDate]
     }
 
-    const sanitized = {
-      startDate,
-      endDate,
-    }
-
+    const sanitized = { startDate, endDate }
     if (includePeriod) sanitized.period = params.period || DEFAULT_PERIOD
-
     if (['CHART_PNG', 'CHART_SVG'].includes(params.format)) {
       sanitized.chartType = params.chartType || 'bar'
     }
-
     return sanitized
   },
 
@@ -128,20 +97,9 @@ export default {
     return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0]
   },
 
-  validateBlob(blobData, format) {
+  validateBlob(blobData) {
     if (!(blobData instanceof Blob)) throw new Error('Respuesta no es un archivo válido')
     if (blobData.size === 0) throw new Error('El archivo recibido está vacío')
-
-    const expectedTypes = {
-      PDF: 'application/pdf',
-      EXCEL: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      CHART_PNG: 'image/png',
-      CHART_SVG: 'image/svg+xml',
-    }
-
-    if (blobData.type !== expectedTypes[format]) {
-      console.warn(`Tipo MIME inesperado: ${blobData.type} para formato ${format}`)
-    }
   },
 
   getExportErrorMessage(error) {
@@ -156,15 +114,5 @@ export default {
       }
     }
     return error.message || 'Error desconocido al descargar el reporte'
-  },
-
-  async makeApiRequest(url, params = {}) {
-    try {
-      const response = await api.get(url, { params: { ...params, _: Date.now() } })
-      return response.data
-    } catch (error) {
-      console.error(`[API Request Error] ${url}`, { error })
-      throw error
-    }
   },
 }
