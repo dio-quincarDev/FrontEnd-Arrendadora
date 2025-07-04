@@ -182,7 +182,7 @@ async function confirmDeleteAction() {
           color="primary"
           icon="add"
           label="Nueva Renta"
-          @click="router.push('/rentals/new')"
+          @click="router.push('/rentals/create')"
         />
       </template>
 
