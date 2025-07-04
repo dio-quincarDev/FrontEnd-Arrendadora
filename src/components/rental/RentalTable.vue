@@ -88,9 +88,9 @@ async function loadRentals() {
 // Utility functions
 const formatDate = (dateString) => date.formatDate(dateString, 'DD/MM/YYYY')
 const formatCurrency = (value) =>
-  new Intl.NumberFormat('es-MX', {
+  new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'MXN',
+    currency: 'USD',
   }).format(value)
 
 const getStatusColor = (status) => {

@@ -205,8 +205,8 @@ const goBack = () => router.push('/rentals')
                 <div class="text-subtitle2">Cliente</div>
                 <q-separator class="q-my-sm" />
                 <div class="text-h6">{{ customer.firstName }} {{ customer.lastName }}</div>
-                <div>DNI: {{ customer.documentNumber }}</div>
-                <div>Tel: {{ customer.phoneNumber }}</div>
+                <div>Identificación: {{ customer.documentNumber }}</div>
+                <div>Celular: {{ customer.phoneNumber }}</div>
                 <div>Email: {{ customer.email }}</div>
               </q-card-section>
             </q-card>
