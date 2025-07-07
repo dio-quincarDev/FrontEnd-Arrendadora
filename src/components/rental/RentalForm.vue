@@ -56,13 +56,19 @@ onMounted(async () => {
 async function loadVehicles() {
   loadingVehicles.value = true
   try {
-    const res = await VehicleService.getAvailableVehicles()
-    vehicles.value = res.data.map((v) => {
-      dailyRates.value[v.id] = v.dailyRate
+    // *** CAMBIO CLAVE AQUÍ: Cambia 'getAvailableVehicles()' por 'getVehicles()' ***
+    const res = await VehicleService.getVehicles()
+
+    // El resto del código de mapeo para vehículos ya lo ajustamos:
+    const availableVehicles = res.filter((v) => v.status === 'AVAILABLE')
+
+    vehicles.value = availableVehicles.map((v) => {
+      dailyRates.value[v.id] = 0 // Temporalmente 0, hasta que el backend proporcione dailyRate
+
       return {
         id: v.id,
-        label: `${v.make} ${v.model} (${v.year})`,
-        description: `Placa: ${v.licensePlate} - Tarifa diaria: $${v.dailyRate}`,
+        label: `${v.brand} ${v.model} (${v.year})`,
+        description: `Placa: ${v.plate}`,
       }
     })
   } catch (e) {
@@ -76,15 +82,31 @@ async function loadVehicles() {
 async function loadCustomers() {
   loadingCustomers.value = true
   try {
-    const res = await CustomerService.getCustomers()
-    customers.value = res.data.map((c) => ({
-      id: c.id,
-      label: `${c.firstName} ${c.lastName}`,
-      description: `DNI: ${c.documentNumber} - Tel: ${c.phoneNumber}`,
-    }))
+    // *** CAMBIO CLAVE AQUÍ: await CustomerService.getCustomers() ya devuelve el array directo ***
+    const customersData = await CustomerService.getCustomers()
+
+    // Validamos que 'customersData' sea un array antes de mapear.
+    if (Array.isArray(customersData)) {
+      customers.value = customersData.map((c) => ({
+        // Usamos 'customersData' directamente
+        id: c.id,
+        label: `${c.name}`,
+        description: `Licencia: ${c.license} - Tel: ${c.phone}`,
+      }))
+    } else {
+      // Si la data no es un array, registramos un error.
+      console.error('La respuesta de clientes no contiene un array válido:', customersData)
+      customers.value = []
+      $q.notify({
+        type: 'negative',
+        message: 'Error: Formato de datos de clientes inesperado.',
+        position: 'top',
+      })
+    }
   } catch (e) {
     console.error('Error al cargar clientes:', e)
-    $q.notify({ type: 'negative', message: 'Error al cargar clientes', position: 'top' })
+    $q.notify({ type: 'negative', message: 'Error al cargar clientes.', position: 'top' })
+    customers.value = []
   } finally {
     loadingCustomers.value = false
   }

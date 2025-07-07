@@ -88,9 +88,9 @@ async function loadRentals() {
 // Utility functions
 const formatDate = (dateString) => date.formatDate(dateString, 'DD/MM/YYYY')
 const formatCurrency = (value) =>
-  new Intl.NumberFormat('es-MX', {
+  new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'MXN',
+    currency: 'USD',
   }).format(value)
 
 const getStatusColor = (status) => {
@@ -182,7 +182,7 @@ async function confirmDeleteAction() {
           color="primary"
           icon="add"
           label="Nueva Renta"
-          @click="router.push('/rentals/new')"
+          @click="router.push('/rentals/create')"
         />
       </template>
 
