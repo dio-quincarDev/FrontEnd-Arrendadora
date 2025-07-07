@@ -42,16 +42,16 @@ const customerRoutes = [
 const vehicleRoutes = [
   { path: 'vehicles', component: VehicleListPage },
   { path: 'vehicles/create', component: VehicleCreatePage },
-  { path: 'vehicles/:id', component: VehicleDetailsPage, props: true },
   { path: 'vehicles/edit/:id', component: VehicleEditPage, props: true },
+  { path: 'vehicles/:id', component: VehicleDetailsPage, props: true },
 ]
 
 // Subrutas para rentas
 const rentalRoutes = [
   { path: 'rentals', component: RentalListPage },
   { path: 'rentals/create', component: RentalCreatePage },
-  { path: 'rentals/:id', component: RentalDetailsPage, props: true },
   { path: 'rentals/edit/:id', component: RentalEditPage, props: true },
+  { path: 'rentals/:id', component: RentalDetailsPage, props: true },
 ]
 
 // Rutas principales
