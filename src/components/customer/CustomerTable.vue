@@ -56,17 +56,35 @@ export default {
   },
   computed: {
     isAdmin() {
-      const token = localStorage.getItem('jwtToken')
-      if (token) {
-        try {
-          const decodedToken = jwtDecode(token)
-          return decodedToken.roles && decodedToken.roles.includes('ROLE_ADMIN') // Ajusta la clave del rol si es diferente
-        } catch (error) {
-          console.error('Error al decodificar el token:', error)
-          return false
-        }
+      // Usar 'authToken' como confirmamos
+      const token = localStorage.getItem('authToken')
+      console.log('DEBUG (CustomerTable): Token de localStorage (authToken):', token)
+
+      if (!token) {
+        console.log('DEBUG (CustomerTable): No hay token (authToken). isAdmin = false.')
+        return false
       }
-      return false
+
+      try {
+        const decodedToken = jwtDecode(token)
+        console.log('DEBUG (CustomerTable): Token decodificado:', decodedToken)
+
+        // --- ¡¡¡CAMBIO CRÍTICO AQUÍ!!! ---
+        // 1. Acceder a 'decodedToken.role' (singular)
+        // 2. Comparar el valor directamente con 'ADMIN' (exactamente como está en el payload)
+        const userRole = decodedToken.role // Accedemos a la propiedad 'role' (singular)
+        console.log('DEBUG (CustomerTable): Rol en el token (valor real):', userRole)
+
+        const hasAdminRole = userRole === 'ADMIN' // Comparamos si el valor es exactamente 'ADMIN'
+
+        console.log('DEBUG (CustomerTable): ¿Tiene rol ADMIN?', hasAdminRole)
+        // --- FIN CAMBIO CRÍTICO ---
+
+        return hasAdminRole
+      } catch (error) {
+        console.error('DEBUG (CustomerTable): Error al decodificar el token con authToken:', error)
+        return false
+      }
     },
   },
   async created() {
