@@ -1,1 +1,85 @@
 // app global css in SCSS form
+
+// ... (código existente de Pasos 2 y 3)
+
+// ESTILO DE BOTONES MINIMALISTA
+.q-btn {
+  text-transform: none; // Evita que el texto del botón esté en mayúsculas por defecto
+  font-weight: 500; // Peso de la fuente ligeramente más grueso
+  border-radius: 6px; // Esquinas suavemente redondeadas
+  padding: 8px 20px; // Relleno horizontal y vertical para un tamaño cómodo
+
+  // Estilo por defecto para botones primarios o "flat"
+  &.q-btn--rectangle {
+    // Botones estándar
+    box-shadow: none !important; // Quita las sombras por defecto
+    border: 1px solid $primary; // Borde sutil del color primario
+    color: $accent; // Color del texto del botón (usa el color de acento)
+    background-color: transparent; // Fondo transparente
+    transition:
+      background-color 0.2s ease-in-out,
+      border-color 0.2s ease-in-out;
+
+    &:hover {
+      background-color: rgba($accent, 0.08); // Ligero fondo al pasar el ratón
+      border-color: $accent; // Borde se vuelve color de acento
+    }
+  }
+
+  // Estilo para botones "unelevated" (botones que deseas que tengan un color de fondo sólido)
+  &.q-btn--unelevated {
+    box-shadow: none !important; // También quita sombras
+    background-color: $accent !important; // Fondo con el color de acento
+    color: white !important; // Texto blanco para contraste
+    border: 1px solid $accent !important; // Borde del mismo color de acento
+
+    &:hover {
+      background-color: darken($accent, 5%) !important; // Un poco más oscuro al pasar el ratón
+      border-color: darken($accent, 5%) !important;
+    }
+  }
+
+  // Estilo para botones "flat" (ideal para acciones secundarias o botones de texto)
+  &.q-btn--flat {
+    box-shadow: none !important;
+    background-color: transparent !important;
+    color: $accent !important;
+    border: none !important; // Sin borde
+
+    &:hover {
+      background-color: rgba($accent, 0.08) !important;
+    }
+  }
+
+  // Estilo para botones "outline" (borde solamente)
+  &.q-btn--outline {
+    box-shadow: none !important;
+    background-color: transparent !important;
+    color: $accent !important;
+    border: 1px solid $accent !important; // Borde del color de acento
+
+    &:hover {
+      background-color: rgba($accent, 0.08) !important;
+    }
+  }
+
+  // Ajustes específicos para botones pequeños (ej. en tablas)
+  &.q-btn--sm {
+    padding: 4px 12px;
+    font-size: 0.75rem;
+  }
+  // Ajustes específicos para botones grandes
+  &.q-btn--lg {
+    padding: 12px 24px;
+    font-size: 1rem;
+  }
+}
+
+// Estilos para los Q-Icon (para hacerlos outlined por defecto si no se especifica)
+// Esto es un ejemplo, no modifica el comportamiento de los iconos ya establecidos con 'sym_o_'
+// Pero si usas `name="home"`, Quasar buscará por defecto el solid.
+// Para asegurar outlined, siempre usa `name="sym_o_home"`
+// Si quieres cambiar el color de los iconos que son solo iconos:
+.q-icon {
+  color: $accent; // Color de acento para iconos por defecto si no tienen otro color
+}

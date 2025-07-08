@@ -2,19 +2,21 @@
 // --------------------------
 // Personalización de colores para la aplicación
 
-$primary: #1976d2;
-$secondary: #26a69a;
-$accent: #9c27b0;
+// PALETA DE COLORES MINIMALISTA SUGERIDA:
+$primary: #f0f2f5; // Gris muy claro, casi blanco (para barras, fondos de cards)
+$secondary: #e0e4eb; // Un gris claro un poco más oscuro (para elementos secundarios, bordes)
+$accent: #5f9ea0; // Un turquesa o verde azulado suave (para botones, enlaces, íconos de interacción)
 
-$dark: #1d1d1d;
-$dark-page: #121212;
+$dark: #2c2c2c; // Un gris oscuro para el modo oscuro (si lo usas)
+$dark-page: #1a1a1a; // Un gris aún más oscuro para fondos de página en modo oscuro
 
-$positive: #21ba45;
-$negative: #c10015;
-$info: #31ccec;
-$warning: #f2c037;
+// Colores de estado (mantener para claridad: positivo, negativo, informativo, advertencia)
+$positive: #4caf50; // Verde
+$negative: #f44336; // Rojo
+$info: #2196f3; // Azul
+$warning: #ffc107; // Amarillo
 
-// 🚀 Soporte para Forced Colors Mode
+// 🚀 Soporte para Forced Colors Mode (Mantener intacto)
 @media (forced-colors: active) {
   $primary: CanvasText;
   $secondary: ButtonText;
@@ -29,7 +31,7 @@ $warning: #f2c037;
   $warning: ButtonBorder;
 }
 
-// Ajustes de accesibilidad en modo alto contraste
+// Ajustes de accesibilidad en modo alto contraste (Mantener intacto)
 @media (forced-colors: active) {
   body {
     background-color: Canvas;
