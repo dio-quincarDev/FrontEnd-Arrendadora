@@ -16,7 +16,7 @@ export default defineConfig((ctx) => {
     css: ['app.scss'],
 
     // https://github.com/quasarframework/quasar/tree/dev/extras
-    extras: ['roboto-font', 'material-icons'],
+    extras: ['roboto-font', 'material-symbols-outlined'],
 
     // Full list of options: https://v2.quasar.dev/quasar-cli-vite/quasar-config-file#build
     build: {
@@ -63,6 +63,7 @@ export default defineConfig((ctx) => {
     framework: {
       config: {},
       plugins: ['Notify'], // Añade 'Notify' aquí
+      iconSet: 'material-icons-outlined', // Cambia a 'material-icons-outlined'
     },
 
     // animations: 'all', // --- includes all animations

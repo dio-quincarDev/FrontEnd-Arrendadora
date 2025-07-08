@@ -1,85 +1,206 @@
 // app global css in SCSS form
 
-// ... (código existente de Pasos 2 y 3)
+// Importa las variables de Quasar SCSS
+// Esto ya debería estar en tu archivo, pero lo incluyo para referencia.
+@import './quasar.variables.scss';
 
-// ESTILO DE BOTONES MINIMALISTA
+// --- AJUSTES GLOBALES DE PÁGINA Y TIPOGRAFÍA ---
+body {
+  // Fondo general de la aplicación. Usa tu $primary o un color aún más suave si prefieres.
+  background-color: $primary;
+  // O un gris casi blanco para un efecto más aireado
+  // background-color: #F8F9FA;
+
+  color: $dark; // Color de texto base, usando tu $dark para contraste
+  font-family: 'Roboto', sans-serif; // Asegura que Roboto sea la fuente principal
+  line-height: 1.6; // Mejora la legibilidad del texto
+}
+
+// Estilo para los títulos (h1-h6) - Quasar ya tiene clases como text-h1, pero podemos ajustarlas
+// Podemos hacerlas ligeramente menos prominentes para un look minimalista
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 600; // Un poco más de peso para destacar
+  color: $dark; // Asegura que los títulos usen el color de texto principal
+  margin-bottom: 0.8em; // Espaciado inferior consistente
+  margin-top: 1.5em; // Espaciado superior para separar secciones
+}
+
+// Estilos para el texto de párrafo y elementos de lista
+p {
+  margin-bottom: 1em;
+}
+
+ul,
+ol {
+  margin-bottom: 1em;
+  padding-left: 20px;
+}
+
+// --- AJUSTES DE ESPACIADO Y CONTENEDORES ---
+
+// Contenedor principal de la aplicación para darle un relleno general
+.q-page {
+  padding: 20px; // Un relleno general para todas las páginas
+  @media (min-width: $breakpoint-sm) {
+    padding: 32px; // Más relleno en pantallas más grandes
+  }
+}
+
+// Estilo para tarjetas y contenedores similares (QCard, etc.)
+// Esto ya podría estar en tu código existente, lo incluyo para que lo revises/ajustes
+.q-card {
+  border-radius: 10px; // Esquinas más redondeadas para un look suave
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05); // Sombra muy sutil para profundidad
+  background-color: white; // Fondo blanco para el contenido principal
+  padding: 24px; // Relleno interno generoso para el contenido de la tarjeta
+
+  // Asegura que el contenido interno de las tarjetas también tenga un espaciado consistente
+  .q-card__section {
+    padding: 16px 0; // Relleno vertical para secciones de tarjeta
+    &:first-child {
+      padding-top: 0;
+    }
+    &:last-child {
+      padding-bottom: 0;
+    }
+  }
+}
+
+// Clases de utilidad para un espaciado más granular (ya las tienes, ¡pero úsalas!)
+// Ejemplos de uso en tus componentes:
+// <div class="q-pa-md">...</div> // Relleno medio en todos los lados
+// <div class="q-mt-lg">...</div> // Margen superior grande
+// <div class="q-gutter-md row">...</div> // Espacio entre elementos dentro de una fila
+
+// --- ESTILO DE BOTONES MINIMALISTA (TU CÓDIGO ACTUAL) ---
 .q-btn {
-  text-transform: none; // Evita que el texto del botón esté en mayúsculas por defecto
-  font-weight: 500; // Peso de la fuente ligeramente más grueso
-  border-radius: 6px; // Esquinas suavemente redondeadas
-  padding: 8px 20px; // Relleno horizontal y vertical para un tamaño cómodo
+  text-transform: none;
+  font-weight: 500;
+  border-radius: 6px;
+  padding: 8px 20px;
 
-  // Estilo por defecto para botones primarios o "flat"
   &.q-btn--rectangle {
-    // Botones estándar
-    box-shadow: none !important; // Quita las sombras por defecto
-    border: 1px solid $primary; // Borde sutil del color primario
-    color: $accent; // Color del texto del botón (usa el color de acento)
-    background-color: transparent; // Fondo transparente
+    box-shadow: none !important;
+    border: 1px solid $secondary; // Usar secondary para borde estándar si no es "unelevated"
+    color: $accent;
+    background-color: transparent;
     transition:
       background-color 0.2s ease-in-out,
       border-color 0.2s ease-in-out;
 
     &:hover {
-      background-color: rgba($accent, 0.08); // Ligero fondo al pasar el ratón
-      border-color: $accent; // Borde se vuelve color de acento
+      background-color: rgba($accent, 0.08);
+      border-color: $accent;
     }
   }
 
-  // Estilo para botones "unelevated" (botones que deseas que tengan un color de fondo sólido)
   &.q-btn--unelevated {
-    box-shadow: none !important; // También quita sombras
-    background-color: $accent !important; // Fondo con el color de acento
-    color: white !important; // Texto blanco para contraste
-    border: 1px solid $accent !important; // Borde del mismo color de acento
+    box-shadow: none !important;
+    background-color: $accent !important;
+    color: white !important;
+    border: 1px solid $accent !important;
 
     &:hover {
-      background-color: darken($accent, 5%) !important; // Un poco más oscuro al pasar el ratón
+      background-color: darken($accent, 5%) !important;
       border-color: darken($accent, 5%) !important;
     }
   }
 
-  // Estilo para botones "flat" (ideal para acciones secundarias o botones de texto)
   &.q-btn--flat {
     box-shadow: none !important;
     background-color: transparent !important;
     color: $accent !important;
-    border: none !important; // Sin borde
+    border: none !important;
 
     &:hover {
       background-color: rgba($accent, 0.08) !important;
     }
   }
 
-  // Estilo para botones "outline" (borde solamente)
   &.q-btn--outline {
     box-shadow: none !important;
     background-color: transparent !important;
     color: $accent !important;
-    border: 1px solid $accent !important; // Borde del color de acento
+    border: 1px solid $accent !important;
 
     &:hover {
       background-color: rgba($accent, 0.08) !important;
     }
   }
 
-  // Ajustes específicos para botones pequeños (ej. en tablas)
   &.q-btn--sm {
     padding: 4px 12px;
     font-size: 0.75rem;
   }
-  // Ajustes específicos para botones grandes
   &.q-btn--lg {
     padding: 12px 24px;
     font-size: 1rem;
   }
 }
 
-// Estilos para los Q-Icon (para hacerlos outlined por defecto si no se especifica)
-// Esto es un ejemplo, no modifica el comportamiento de los iconos ya establecidos con 'sym_o_'
-// Pero si usas `name="home"`, Quasar buscará por defecto el solid.
-// Para asegurar outlined, siempre usa `name="sym_o_home"`
-// Si quieres cambiar el color de los iconos que son solo iconos:
+// Estilos para los Q-Icon
 .q-icon {
-  color: $accent; // Color de acento para iconos por defecto si no tienen otro color
+  color: $accent; // Color de acento para iconos por defecto si no tienen otro color explícito
+}
+
+// --- AJUSTES PARA COMPONENTES ESPECÍFICOS (OPCIONALES) ---
+// Puedes añadir aquí estilos para QInput, QSelect, QTable, etc.
+// Por ejemplo, para inputs con borde sutil:
+.q-field--outlined .q-field__control,
+.q-field--filled .q-field__control {
+  border-radius: 6px; // Mismas esquinas redondeadas que los botones
+  border-color: $secondary; // Borde del color secondary para inputs
+  box-shadow: none !important;
+}
+
+// Ajustes para la barra de navegación (QHeader, QToolbar)
+.q-header {
+  background-color: white; // Fondo blanco o $primary para la barra superior
+  color: $dark; // Texto oscuro para contraste
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); // Sombra sutil para levantarla un poco
+}
+
+.q-toolbar__title {
+  font-weight: 700; // Título más prominente
+  color: $dark;
+}
+
+// Ajustes para el drawer (menú lateral)
+.q-drawer {
+  background-color: white; // Fondo blanco o $primary
+  border-right: 1px solid $secondary; // Borde sutil
+}
+
+.q-item {
+  color: $dark; // Color de texto para los ítems del menú
+  &.q-router-link--active,
+  &.q-item--active {
+    background-color: rgba($accent, 0.1); // Fondo suave para el ítem activo
+    color: $accent; // Color del texto del ítem activo
+  }
+}
+
+// AÑADIDO: SOLUCIÓN DEFINITIVA PARA OCULTAR EL ÍCONO DE "error" EN QInput
+// Este selector apunta directamente al <i> que contiene el icono 'error'.
+// Al estar en un CSS global, tiene más peso para sobrescribir los estilos de Quasar.
+// Se asegura que solo se oculte cuando el campo está en estado de error y el ícono
+// tiene la clase `text-negative` (color de error de Quasar).
+.q-field--error .q-field__append .q-icon.text-negative {
+  display: none !important;
+}
+
+// Opcional: Si el ícono aparece en otro lugar que no sea `append`,
+// puedes probar con `.q-field--error .q-field__control .q-icon.text-negative`
+// O, si es un ícono de error general de Material Icons
+.q-field--error .q-icon[aria-hidden='true']:contains('error') {
+  // Utiliza :contains si tu entorno SCSS lo soporta
+  display: none !important;
+}
+.q-field--error .q-icon.material-icons-outlined:contains('error') {
+  display: none !important;
 }

@@ -1,6 +1,6 @@
 <template>
   <q-page class="row justify-center items-center">
-    <div class="col-md-4 col-sm-6 col-xs-10">
+    <div class="col-md-6 col-sm-8 col-xs-11">
       <q-card>
         <q-card-section>
           <div class="text-h6">Registrarse</div>
