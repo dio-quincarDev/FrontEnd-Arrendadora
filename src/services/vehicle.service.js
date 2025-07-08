@@ -39,7 +39,10 @@ export default {
       const response = await api.get(
         `${API_CONSTANTS.V1_ROUTE}${API_CONSTANTS.VEHICLES_ROUTE}/${id}`,
       )
-      return response.data
+      // --- ¡¡¡CAMBIO CRÍTICO AQUÍ!!! ---
+      // Ahora devolvemos el objeto 'response' completo, no solo 'response.data'
+      return response
+      // --- Fin del cambio ---
     } catch (error) {
       console.error(`Error obteniendo vehículo con ID ${id}:`, error)
       throw error

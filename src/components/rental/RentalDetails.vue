@@ -1,10 +1,13 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue' // Importa 'computed'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { useQuasar, date } from 'quasar'
+
+// --- ASEGÚRATE QUE ESTAS RUTAS Y NOMBRES DE ARCHIVOS SON CORRECTOS ---
 import RentalService from 'src/services/rental.service'
 import VehicleService from 'src/services/vehicle.service'
 import CustomerService from 'src/services/customer.service'
+// -------------------------------------------------------------------
 
 const props = defineProps({
   rentalId: {
@@ -15,75 +18,81 @@ const props = defineProps({
 
 const $q = useQuasar()
 const router = useRouter()
+const route = useRoute()
 
-const rental = ref({}) // Inicializa como objeto vacío
+const rental = ref({})
 const vehicle = ref(null)
 const customer = ref(null)
-const loading = ref(true) // Indica que se está cargando (ya sea detalles o decidiendo si es 'new')
+const loading = ref(true)
 const showCancelDialog = ref(false)
 const processing = ref(false)
 
-// Nueva propiedad computada para detectar si la ruta es para una 'nueva' renta
 const isNewRental = computed(() => props.rentalId === 'new')
 
 onMounted(() => {
-  // Solo intenta cargar detalles de la renta si NO es el caso de 'new'
-  if (!isNewRental.value) {
-    loadRentalDetails()
+  const currentRentalId = props.rentalId || route.params.id
+  if (currentRentalId && currentRentalId !== 'new') {
+    loadRentalDetails(currentRentalId)
   } else {
-    // Si es una 'nueva' renta, no necesitamos cargar nada, así que desactiva el estado de carga
     loading.value = false
-    // Limpia el objeto rental por si había datos de una navegación previa
     rental.value = {}
   }
 })
 
-async function loadRentalDetails() {
+async function loadRentalDetails(idToLoad) {
   loading.value = true
   try {
-    const response = await RentalService.getRentalById(props.rentalId)
-    rental.value = response.data
+    const rentalResponse = await RentalService.getRentalById(idToLoad)
+    rental.value = rentalResponse.data
 
-    // Carga de vehículo si existe el ID
     if (rental.value.vehicleId) {
       const vehicleResponse = await VehicleService.getVehicleById(rental.value.vehicleId)
-      vehicle.value = vehicleResponse.data
+      vehicle.value = vehicleResponse.data // Aquí vehicle.value podría ser undefined si vehicleResponse.data lo es
     } else {
-      vehicle.value = null // Asegura que no haya datos de vehículo si el ID es nulo
+      vehicle.value = null
     }
 
-    // Carga de cliente si existe el ID
     if (rental.value.customerId) {
       const customerResponse = await CustomerService.getCustomerById(rental.value.customerId)
-      customer.value = customerResponse.data
+      customer.value = customerResponse // Aquí customer.value podría ser undefined si customerResponse.data lo es
     } else {
-      customer.value = null // Asegura que no haya datos de cliente si el ID es nulo
+      customer.value = null
     }
+
+    // --- DEPURACIÓN FINAL DE DATOS (CON CONSOLE.LOGS ROBUSTOS) ---
+    console.log('--- RENTAL DETAILS (FINAL DEBUG) ---')
+    console.log('1. ID de la ruta (actual):', idToLoad)
+    console.log('2. Data de la Renta (rental.value):', rental.value) // <-- Logguea directamente
+    console.log('3. Data del Vehículo (vehicle.value):', vehicle.value) // <-- Logguea directamente
+    console.log('4. Data del Cliente (customer.value):', customer.value) // <-- Logguea directamente
+    console.log('------------------------------------')
+    // --- FIN DEPURACIÓN FINAL ---
   } catch (error) {
     console.error('Error al cargar detalles de la renta:', error)
     $q.notify({
       type: 'negative',
-      message: 'Error al cargar los detalles. La renta podría no existir.',
+      message: `Error al cargar los detalles. ${error.message || 'La renta podría no existir.'}`,
       position: 'top',
     })
-    // Redirige a la lista de rentas si no se puede cargar una existente
-    router.push('/rentals')
+    // Aquí puedes decidir si redirigir o no.
+    // router.push('/rentals')
   } finally {
     loading.value = false
   }
 }
 
-const formatDate = (dateString) => date.formatDate(dateString, 'DD/MM/YYYY')
-const formatDateTime = (dateString) => date.formatDate(dateString, 'DD/MM/YYYY HH:mm')
+const formatDate = (dateString) => (dateString ? date.formatDate(dateString, 'DD/MM/YYYY') : '')
+const formatDateTime = (dateString) =>
+  dateString ? date.formatDate(dateString, 'DD/MM/YYYY HH:mm') : ''
 const formatCurrency = (value) =>
-  new Intl.NumberFormat('es-MX', {
+  new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'MXN',
+    currency: 'USD',
   }).format(value)
 
 const getStatusColor = (status) => {
   const statusColors = {
-    RENTED: 'positive', // Asumiendo 'RENTED' como estado activo inicial para nuevas rentas
+    RENTED: 'positive',
     COMPLETED: 'primary',
     CANCELLED: 'negative',
   }
@@ -99,7 +108,7 @@ async function confirmCancel() {
       message: 'Renta cancelada correctamente',
       position: 'top',
     })
-    await loadRentalDetails() // Vuelve a cargar los detalles para actualizar el estado
+    await loadRentalDetails(props.rentalId)
   } catch (error) {
     console.error('Error al cancelar la renta:', error)
     $q.notify({
@@ -189,13 +198,17 @@ const goBack = () => router.push('/rentals')
                 <div class="text-subtitle2">Vehículo</div>
                 <q-separator class="q-my-sm" />
                 <div class="text-h6">
-                  {{ vehicle.make }} {{ vehicle.model }} ({{ vehicle.year }})
+                  {{ vehicle.model }}
                 </div>
                 <div class="q-mt-sm">
-                  <span>Placa: {{ vehicle.licensePlate }}</span> |
-                  <span>Color: {{ vehicle.color }}</span>
+                  <span>Placa: {{ vehicle.plate || 'N/A' }}</span>
                 </div>
-                <div>Tarifa diaria: {{ formatCurrency(vehicle.dailyRate) }}</div>
+                <div>
+                  Tarifa diaria:
+                  {{
+                    vehicle.dailyRate != null ? formatCurrency(vehicle.dailyRate) : 'No disponible'
+                  }}
+                </div>
               </q-card-section>
             </q-card>
             <div v-else class="text-grey-7 q-mb-md">No hay información de vehículo disponible.</div>
@@ -204,10 +217,9 @@ const goBack = () => router.push('/rentals')
               <q-card-section>
                 <div class="text-subtitle2">Cliente</div>
                 <q-separator class="q-my-sm" />
-                <div class="text-h6">{{ customer.firstName }} {{ customer.lastName }}</div>
-                <div>Identificación: {{ customer.documentNumber }}</div>
-                <div>Celular: {{ customer.phoneNumber }}</div>
-                <div>Email: {{ customer.email }}</div>
+                <div class="text-h6">{{ customer.name }}</div>
+                <div>Licencia: {{ customer.license || 'N/A' }}</div>
+                <div>Celular: {{ customer.phone || 'N/A' }}</div>
               </q-card-section>
             </q-card>
             <div v-else class="text-grey-7">No hay información de cliente disponible.</div>
