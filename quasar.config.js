@@ -63,7 +63,7 @@ export default defineConfig((ctx) => {
     framework: {
       config: {},
       plugins: ['Notify'], // Añade 'Notify' aquí
-      iconSet: 'material-icons-outlined', // Cambia a 'material-icons-outlined'
+      iconSet: 'material-symbols-outlined', // CAMBIO: Usar el mismo set que en 'extras'
     },
 
     // animations: 'all', // --- includes all animations

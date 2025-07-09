@@ -1,88 +1,171 @@
 <template>
-  <div>
-    <q-table :rows="customers" :columns="columns">
-      <template v-slot:top-right>
-        <q-btn v-if="isAdmin" color="primary" label="Crear Cliente" to="/customers/create" />
-      </template>
-      <template v-slot:body-cell-actions="props">
-        <q-btn flat icon="edit" @click="goToEdit(props.row.id)" />
-        <q-btn
-          v-if="isAdmin"
-          flat
-          icon="delete"
-          @click="confirmDelete(props.row)"
-          color="negative"
-        />
-      </template>
-    </q-table>
+  <!-- El contenedor principal ahora es la q-card, no q-page, para que sea más reutilizable -->
+  <q-card flat class="q-pa-md">
+    <q-card-section>
+      <div class="row items-center q-gutter-md">
+        <div class="col">
+          <h2 class="text-h5 text-dark q-my-none">Gestión de Clientes</h2>
+          <p class="text-grey-7 q-mb-none">Aquí puedes administrar todos tus clientes.</p>
+        </div>
+      </div>
+    </q-card-section>
 
-    <q-dialog v-model="showDialog">
-      <q-card>
-        <q-card-section> ¿Está seguro que desea eliminar este cliente? </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="Cancelar" v-close-popup />
-          <q-btn
-            flat
-            :disable="!isAdmin"
-            label="Eliminar"
-            @click="deleteCustomer"
-            color="negative"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-  </div>
+    <q-card-section class="q-pa-none">
+      <q-table :rows="customers" :columns="columns" row-key="id" :loading="loading" flat>
+        <template v-slot:body-cell-actions="props">
+          <q-td :props="props">
+            <!-- CAMBIO: Ahora llama al método local que emite un evento -->
+            <q-btn
+              icon="sym_o_edit"
+              color="primary"
+              flat
+              round
+              dense
+              @click="emitEditEvent(props.row)"
+            >
+              <q-tooltip>Editar Cliente</q-tooltip>
+            </q-btn>
+            <q-btn
+              v-if="isAdmin"
+              icon="sym_o_delete"
+              color="negative"
+              flat
+              round
+              dense
+              @click="confirmDelete(props.row)"
+            >
+              <q-tooltip>Eliminar Cliente</q-tooltip>
+            </q-btn>
+            <!-- CAMBIO: Ahora llama al método local que emite un evento -->
+            <q-btn
+              icon="sym_o_info"
+              color="info"
+              flat
+              round
+              dense
+              @click="emitDetailsEvent(props.row)"
+            >
+              <q-tooltip>Ver Detalles</q-tooltip>
+            </q-btn>
+          </q-td>
+        </template>
+
+        <template v-slot:no-data="{ filter }">
+          <div class="full-width row flex-center text-accent q-gutter-sm q-pa-lg">
+            <q-icon size="2em" name="sentiment_dissatisfied" />
+            <span>
+              No hay clientes disponibles.
+              <span v-if="filter"> para la búsqueda "{{ filter }}"</span>
+            </span>
+          </div>
+        </template>
+      </q-table>
+    </q-card-section>
+  </q-card>
+
+  <!-- La lógica del diálogo de borrado se mantiene igual, ya que es autocontenida y funciona bien -->
+  <q-dialog v-model="showDialog" persistent>
+    <q-card>
+      <q-card-section class="row items-center">
+        <q-avatar icon="warning" color="warning" text-color="white" class="q-mr-md" />
+        <span class="q-ml-sm">
+          ¿Estás seguro de que quieres eliminar al cliente
+          <strong>"{{ customerToDelete ? customerToDelete.name : '' }}"</strong>? Esta acción no
+          se puede deshacer.
+        </span>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Cancelar" color="grey" v-close-popup />
+        <q-btn
+          label="Eliminar"
+          color="negative"
+          unelevated
+          :disable="!isAdmin"
+          @click="deleteCustomer"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
 </template>
 
 <script>
 import CustomerService from 'src/services/customer.service'
-import { jwtDecode } from 'jwt-decode' // Asegúrate de instalar esta dependencia
+import { jwtDecode } from 'jwt-decode'
+import { useQuasar, date } from 'quasar'
 
 export default {
   name: 'CustomerTable',
+  // AÑADIDO: Definimos los eventos que este componente puede emitir.
+  // Esto es una buena práctica para que otros desarrolladores sepan cómo usarlo.
+  emits: ['edit-customer', 'view-details'],
+  setup() {
+    const $q = useQuasar()
+    return { $q }
+  },
   data() {
     return {
       customers: [],
       columns: [
-        { name: 'name', label: 'Nombre', field: 'name', align: 'left' },
-        { name: 'email', label: 'Email', field: 'email', align: 'left' },
-        { name: 'license', label: 'Identificación', field: 'license', align: 'left' },
-        { name: 'phone', label: 'Teléfono', field: 'phone', align: 'left' },
+        {
+          name: 'name',
+          required: true,
+          label: 'Nombre',
+          align: 'left',
+          field: 'name',
+          sortable: true,
+        },
+        { name: 'email', label: 'Email', align: 'left', field: 'email', sortable: true },
+        {
+          name: 'license',
+          label: 'Identificación',
+          align: 'left',
+          field: 'license',
+          sortable: true,
+        },
+        { name: 'phone', label: 'Teléfono', align: 'left', field: 'phone', sortable: true },
+        {
+          name: 'customerStatus',
+          label: 'Estado',
+          align: 'center',
+          field: 'customerStatus',
+          sortable: true,
+          format: (val) => (val === 'ACTIVE' ? 'Activo' : 'Inactivo'),
+        },
+        {
+          name: 'createdAt',
+          label: 'Creado',
+          align: 'left',
+          field: 'createdAt',
+          sortable: true,
+          format: (val) => date.formatDate(val, 'YYYY-MM-DD HH:mm'),
+        },
         { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' },
       ],
+      loading: false,
       showDialog: false,
       customerToDelete: null,
+      pagination: {
+        sortBy: 'name',
+        descending: false,
+        page: 1,
+        rowsPerPage: 10,
+        rowsNumber: 0,
+      },
     }
   },
   computed: {
     isAdmin() {
-      // Usar 'authToken' como confirmamos
       const token = localStorage.getItem('authToken')
-      console.log('DEBUG (CustomerTable): Token de localStorage (authToken):', token)
-
       if (!token) {
-        console.log('DEBUG (CustomerTable): No hay token (authToken). isAdmin = false.')
         return false
       }
-
       try {
         const decodedToken = jwtDecode(token)
-        console.log('DEBUG (CustomerTable): Token decodificado:', decodedToken)
-
-        // --- ¡¡¡CAMBIO CRÍTICO AQUÍ!!! ---
-        // 1. Acceder a 'decodedToken.role' (singular)
-        // 2. Comparar el valor directamente con 'ADMIN' (exactamente como está en el payload)
-        const userRole = decodedToken.role // Accedemos a la propiedad 'role' (singular)
-        console.log('DEBUG (CustomerTable): Rol en el token (valor real):', userRole)
-
-        const hasAdminRole = userRole === 'ADMIN' // Comparamos si el valor es exactamente 'ADMIN'
-
-        console.log('DEBUG (CustomerTable): ¿Tiene rol ADMIN?', hasAdminRole)
-        // --- FIN CAMBIO CRÍTICO ---
-
-        return hasAdminRole
+        // CORRECCIÓN: Usar 'decodedToken.role' (singular) y comparar con 'ADMIN'
+        const userRole = decodedToken.role || ''
+        return userRole === 'ADMIN'
       } catch (error) {
-        console.error('DEBUG (CustomerTable): Error al decodificar el token con authToken:', error)
+        console.error('Error al decodificar el token:', error)
         return false
       }
     },
@@ -91,33 +174,63 @@ export default {
     await this.loadCustomers()
   },
   methods: {
+    // AÑADIDO: Un método público que el padre puede llamar para refrescar la tabla.
+    async refresh() {
+      await this.loadCustomers();
+    },
     async loadCustomers() {
+      this.loading = true
       try {
         this.customers = await CustomerService.getCustomers()
+        this.pagination.rowsNumber = this.customers.length
       } catch (error) {
         console.error('Error al cargar los clientes:', error)
         this.$q.notify({ type: 'negative', message: 'Error al cargar los clientes' })
+      } finally {
+        this.loading = false
       }
     },
-    goToEdit(id) {
-      this.$router.push(`/customers/edit/${id}`)
+    // ELIMINADOS: Los métodos goToCreate, goToEdit, goToDetails ya no son necesarios aquí.
+
+    // AÑADIDO: Nuevo método para emitir el evento de edición.
+    // Pasamos el objeto completo del cliente, es más útil para el padre.
+    emitEditEvent(customer) {
+      this.$emit('edit-customer', customer)
     },
+
+    // AÑADIDO: Nuevo método para emitir el evento de ver detalles.
+    emitDetailsEvent(customer) {
+      this.$emit('view-details', customer)
+    },
+
     confirmDelete(customer) {
       this.customerToDelete = customer
       this.showDialog = true
     },
     async deleteCustomer() {
+      this.loading = true
       try {
         await CustomerService.deleteCustomer(this.customerToDelete.id)
         this.$q.notify({ type: 'positive', message: 'Cliente eliminado correctamente' })
-        await this.loadCustomers()
+        await this.loadCustomers() // Recarga la tabla después de eliminar
       } catch (error) {
         console.error('Error al eliminar el cliente:', error)
-        this.$q.notify({ type: 'negative', message: 'Error al eliminar el cliente' })
+        const errorMessage = error.response?.data?.message || 'Error al eliminar el cliente.'
+        this.$q.notify({ type: 'negative', message: errorMessage })
       } finally {
         this.showDialog = false
+        this.loading = false
+        this.customerToDelete = null
       }
+    },
+    onRequest(props) {
+      this.pagination = props.pagination
+      this.loadCustomers()
     },
   },
 }
 </script>
+
+<style scoped lang="scss">
+/* No se necesitan estilos adicionales aquí, la consistencia la da app.scss */
+</style>
