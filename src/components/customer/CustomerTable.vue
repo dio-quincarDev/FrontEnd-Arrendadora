@@ -52,7 +52,7 @@
 
         <template v-slot:no-data="{ filter }">
           <div class="full-width row flex-center text-accent q-gutter-sm q-pa-lg">
-            <q-icon size="2em" name="sentiment_dissatisfied" />
+            <q-icon size="2em" name="sym_o_sentiment_dissatisfied" />
             <span>
               No hay clientes disponibles.
               <span v-if="filter"> para la búsqueda "{{ filter }}"</span>
