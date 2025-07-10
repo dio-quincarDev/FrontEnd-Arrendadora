@@ -4,17 +4,18 @@
     <div class="row justify-between items-center q-mb-md">
       <h1 class="text-h4">Clientes</h1>
       <q-btn
-        icon="add"
+        icon="sym_o_add"
         label="Crear Cliente"
-        color="accent"
-        unelevated
+        outline
+        text-color="accent"
         @click="handleCreateCustomer"
+        class="flex flex-center bg-grey-1"
       />
     </div>
 
     <!-- 2. La tabla de clientes ahora escucha los eventos que creamos -->
     <customer-table
-      ref="customerTableRef" 
+      ref="customerTableRef"
       @edit-customer="handleEditCustomer"
       @view-details="handleViewDetails"
     />
