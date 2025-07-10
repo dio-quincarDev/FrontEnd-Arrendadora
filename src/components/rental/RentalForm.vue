@@ -1,88 +1,223 @@
+<template>
+  <q-card style="width: 500px; max-width: 90vw">
+    <q-card-section>
+      <div class="text-h6">{{ isEditMode ? 'Editar Renta' : 'Crear Nueva Renta' }}</div>
+    </q-card-section>
+
+    <q-separator />
+
+    <q-form ref="rentalFormRef" @submit.prevent="submitForm">
+      <q-card-section>
+        <q-select
+          v-model="formData.vehicleId"
+          :options="vehicles"
+          option-value="value"
+          option-label="label"
+          label="Vehículo *"
+          outlined
+          dense
+          emit-value
+          map-options
+          :rules="[(val) => !!val || 'Por favor, selecciona un vehículo']"
+          :loading="loadingVehicles"
+          :disable="loadingVehicles || isEditMode"
+          class="q-mb-md"
+        >
+          <template v-slot:option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section>
+                <q-item-label>{{ scope.opt.label }}</q-item-label>
+                <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <q-select
+          v-model="formData.customerId"
+          :options="customers"
+          option-value="value"
+          option-label="label"
+          label="Cliente *"
+          outlined
+          dense
+          emit-value
+          map-options
+          :rules="[(val) => !!val || 'Por favor, selecciona un cliente']"
+          :loading="loadingCustomers"
+          :disable="loadingCustomers || isEditMode"
+          class="q-mb-md"
+        >
+          <template v-slot:option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section>
+                <q-item-label>{{ scope.opt.label }}</q-item-label>
+                <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <div class="row q-col-gutter-md q-mb-md">
+          <div class="col-12 col-sm-6">
+            <q-input
+              v-model="formData.startDate"
+              label="Fecha Inicio *"
+              outlined
+              dense
+              :rules="[(val) => !!val || 'Por favor, selecciona la fecha de inicio']"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="formData.startDate"
+                      mask="YYYY-MM-DD"
+                      @update:model-value="updateEndDate"
+                    />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+
+          <div class="col-12 col-sm-6">
+            <q-input
+              v-model="formData.endDate"
+              label="Fecha Fin *"
+              outlined
+              dense
+              :rules="[
+                (val) => !!val || 'Por favor, selecciona la fecha de fin',
+                (val) => isValidEndDate(val) || 'La fecha de fin debe ser posterior o igual a la de inicio',
+              ]"
+            >
+              <template v-slot:append>
+                <q-icon name="event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="formData.endDate"
+                      mask="YYYY-MM-DD"
+                      :options="(date) => isValidEndDate(date)"
+                    />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+        </div>
+
+        <q-input
+          v-model.number="formData.totalPrice"
+          label="Precio Total *"
+          type="number"
+          outlined
+          dense
+          min="0"
+          step="0.01"
+          prefix="$"
+          readonly
+          :rules="[(val) => val >= 0 || 'El precio debe ser cero o mayor']"
+          class="q-mb-md"
+        />
+      </q-card-section>
+
+      <q-separator />
+
+      <q-card-actions align="right" class="q-pa-md">
+        <q-btn label="Cancelar" flat color="grey" @click="onCancel" />
+        <q-btn
+          :label="isEditMode ? 'Guardar Cambios' : 'Crear Renta'"
+          type="submit"
+          color="accent"
+          unelevated
+          :loading="loading"
+        />
+      </q-card-actions>
+    </q-form>
+  </q-card>
+</template>
+
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, watch, computed, onMounted } from 'vue'
 import { useQuasar, date } from 'quasar'
 import RentalService from 'src/services/rental.service'
 import VehicleService from 'src/services/vehicle.service'
 import CustomerService from 'src/services/customer.service'
 
 const props = defineProps({
-  rentalId: [String, Number],
+  rentalToEdit: {
+    type: Object,
+    default: null,
+  },
 })
 
-const $q = useQuasar()
-const router = useRouter()
+const emit = defineEmits(['rental-saved', 'cancel'])
 
-const isEditMode = ref(false)
-const submitting = ref(false)
+const $q = useQuasar()
+const rentalFormRef = ref(null)
+const loading = ref(false)
 const loadingVehicles = ref(false)
 const loadingCustomers = ref(false)
 
-// MODIFICADO: Inicialización completa de rental para asegurar reactividad y valores por defecto
-const rental = ref({
-  id: null,
+const formData = ref({
   vehicleId: null,
   customerId: null,
   startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
   endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
   totalPrice: 0,
-  rentalStatus: null, // AÑADIDO: Si esperas esta propiedad
-  createdAt: null, // AÑADIDO: Si esperas esta propiedad
+  rentalStatus: 'RENTED', // Estado por defecto para nuevas rentas
 })
 
 const vehicles = ref([])
 const customers = ref([])
 const dailyRates = ref({})
 
-const requiredRule = (val) => !!val || 'Campo requerido'
-const priceRule = (val) => val >= 0 || 'El precio debe ser cero o mayor' // MODIFICADO: Precio puede ser 0
-const validateEndDate = (val) =>
-  isValidEndDate(val) || 'La fecha de fin debe ser posterior o igual a la fecha de inicio' // MODIFICADO: Mensaje y lógica
-
-const canCalculatePrice = computed(() => {
-  return (
-    rental.value.vehicleId &&
-    rental.value.startDate &&
-    rental.value.endDate &&
-    isValidEndDate(rental.value.endDate) &&
-    dailyRates.value[rental.value.vehicleId] !== undefined // AÑADIDO: Asegura que la tarifa diaria exista
-  )
-})
+const isEditMode = computed(() => !!props.rentalToEdit)
 
 onMounted(async () => {
-  // AÑADIDO: Comprobación para establecer isEditMode basada en props.rentalId
-  isEditMode.value = props.rentalId && props.rentalId !== 'new'
-
-  await Promise.all([loadVehicles(), loadCustomers()]) // Carga vehículos y clientes primero
-
-  if (isEditMode.value) {
-    // Usa la variable isEditMode
-    await loadRental() // Carga los detalles de la renta existente
-  } else {
-    // Si es una nueva renta, reinicia a valores predeterminados (ya hecho en la declaración de 'rental')
-    // y no necesitas cargar una renta existente.
-    // Asegurarse de que el precio total se reinicie a 0 para nuevas rentas
-    rental.value.totalPrice = 0
-  }
+  await Promise.all([loadVehicles(), loadCustomers()])
 })
+
+watch(
+  () => props.rentalToEdit,
+  (newRental) => {
+    if (newRental) {
+      formData.value = {
+        ...newRental,
+        startDate: date.formatDate(newRental.startDate, 'YYYY-MM-DD'),
+        endDate: date.formatDate(newRental.endDate, 'YYYY-MM-DD'),
+      }
+    } else {
+      formData.value = {
+        vehicleId: null,
+        customerId: null,
+        startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
+        endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
+        totalPrice: 0,
+        rentalStatus: 'RENTED',
+      }
+    }
+  },
+  { immediate: true },
+)
+
+watch([() => formData.value.startDate, () => formData.value.endDate, () => formData.value.vehicleId], () => {
+  calculatePrice()
+}, { deep: true })
 
 async function loadVehicles() {
   loadingVehicles.value = true
   try {
-    // Correcto: se mantiene VehicleService.getVehicles()
     const res = await VehicleService.getVehicles()
-
-    const allVehicles = Array.isArray(res) ? res : [] // Asegura que 'res' sea un array
+    const allVehicles = Array.isArray(res) ? res : []
 
     vehicles.value = allVehicles.map((v) => {
-      // MODIFICADO: Asigna dailyRate si existe, si no, usa 0 (o un valor predeterminado)
       dailyRates.value[v.id] = v.dailyRate || 0
-
       return {
-        // MODIFICADO: option-label ahora usa 'label' y 'description'
         label: `${v.brand} ${v.model} (${v.year})`,
-        value: v.id, // El valor que se asignará al v-model
-        description: `Placa: ${v.plate}`, // AÑADIDO para mostrar en el select
+        value: v.id,
+        description: `Placa: ${v.plate}`,
       }
     })
   } catch (e) {
@@ -96,15 +231,12 @@ async function loadVehicles() {
 async function loadCustomers() {
   loadingCustomers.value = true
   try {
-    // Correcto: se mantiene CustomerService.getCustomers()
     const customersData = await CustomerService.getCustomers()
-
     if (Array.isArray(customersData)) {
       customers.value = customersData.map((c) => ({
-        // MODIFICADO: 'label' ahora usa 'name' y 'license'/'phone'
-        label: `${c.name}`, // Asegúrate que 'name' es la propiedad que contiene el nombre completo
-        value: c.id, // El valor que se asignará al v-model
-        description: `Licencia: ${c.license} - Tel: ${c.phone}`, // AÑADIDO para mostrar en el select
+        label: `${c.name}`,
+        value: c.id,
+        description: `Licencia: ${c.license} - Tel: ${c.phone}`,
       }))
     } else {
       console.error('La respuesta de clientes no contiene un array válido:', customersData)
@@ -124,263 +256,68 @@ async function loadCustomers() {
   }
 }
 
-async function loadRental() {
-  try {
-    const res = await RentalService.getRentalById(props.rentalId)
-    const fetchedRental = res.data
-
-    console.log(
-      'Datos de la renta individuales cargados por getRentalById (fetchedRental):',
-      fetchedRental,
-    )
-
-    if (fetchedRental && typeof fetchedRental === 'object' && fetchedRental !== null) {
-      // MODIFICADO: Asegura que las fechas se carguen en formato YYYY-MM-DD para QDate
-      rental.value = {
-        id: fetchedRental.id,
-        customerId: fetchedRental.customerId,
-        vehicleId: fetchedRental.vehicleId,
-        startDate: date.formatDate(fetchedRental.startDate, 'YYYY-MM-DD'), // MODIFICADO: Formato
-        endDate: date.formatDate(fetchedRental.endDate, 'YYYY-MM-DD'), // MODIFICADO: Formato
-        totalPrice: fetchedRental.totalPrice,
-        rentalStatus: fetchedRental.rentalStatus || null, // AÑADIDO para cargar el estado si existe
-        createdAt: fetchedRental.createdAt || null, // AÑADIDO para cargar la fecha de creación
-      }
-      // Después de cargar, si es modo edición y el precio es 0, recalcularlo (por si no se guardó)
-      // O si el precio total viene 0, recalcularlo.
-      if (isEditMode.value && (rental.value.totalPrice === 0 || !rental.value.totalPrice)) {
-        calculatePrice()
-      }
-    } else {
-      console.error(
-        'La respuesta para getRentalById no contiene un objeto de renta válido en .data:',
-        res,
-      )
-      $q.notify({
-        type: 'negative',
-        message: 'Error: Formato de datos de renta inesperado.',
-        position: 'top',
-      })
-      router.push('/rentals')
-    }
-  } catch (e) {
-    console.error('Error al cargar la renta para edición:', e)
-    $q.notify({ type: 'negative', message: 'Error al cargar renta para edición.', position: 'top' })
-    router.push('/rentals')
-  }
-}
-
 function isValidEndDate(dateStr) {
-  // MODIFICADO: Permite que la fecha de fin sea igual a la de inicio
-  return dateStr && rental.value.startDate && new Date(dateStr) >= new Date(rental.value.startDate)
+  return dateStr && formData.value.startDate && new Date(dateStr) >= new Date(formData.value.startDate)
 }
 
 function updateEndDate() {
-  // Asegura que endDate sea al menos startDate + 1 día si se selecciona startDate
-  // o si endDate es anterior a startDate.
-  if (rental.value.startDate && new Date(rental.value.endDate) < new Date(rental.value.startDate)) {
-    rental.value.endDate = date.formatDate(
-      date.addToDate(new Date(rental.value.startDate), { days: 1 }),
+  if (formData.value.startDate && new Date(formData.value.endDate) < new Date(formData.value.startDate)) {
+    formData.value.endDate = date.formatDate(
+      date.addToDate(new Date(formData.value.startDate), { days: 1 }),
       'YYYY-MM-DD',
     )
   }
-  calculatePrice() // AÑADIDO: Recalcular precio al cambiar fechas
 }
 
 function calculatePrice() {
-  if (!canCalculatePrice.value) {
-    // Usa el computed property
-    rental.value.totalPrice = 0 // Si no puede calcular, resetea a 0
-    return
-  }
-  const start = new Date(rental.value.startDate)
-  const end = new Date(rental.value.endDate)
-  // MODIFICADO: Asegura al menos 1 día de renta
+  const start = new Date(formData.value.startDate)
+  const end = new Date(formData.value.endDate)
   const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) || 1
-  const rate = dailyRates.value[rental.value.vehicleId] || 0
-  rental.value.totalPrice = parseFloat((days * rate).toFixed(2)) // AÑADIDO: Formatear a 2 decimales
+  const rate = dailyRates.value[formData.value.vehicleId] || 0
+  formData.value.totalPrice = parseFloat((days * rate).toFixed(2))
 }
-
-// AÑADIDO: Watchers para recalcular el precio automáticamente
-// Vigila cambios en fechas o vehículo seleccionado
-import { watch } from 'vue'
-watch(
-  () => rental.value.startDate,
-  (newVal, oldVal) => {
-    if (newVal !== oldVal) {
-      updateEndDate() // Ajusta endDate si startDate cambia
-    }
-  },
-)
-watch(() => rental.value.endDate, calculatePrice) // Recalcula precio al cambiar endDate
-watch(() => rental.value.vehicleId, calculatePrice) // Recalcula precio al cambiar vehicleId
 
 async function submitForm() {
-  submitting.value = true
+  const isValid = await rentalFormRef.value.validate()
+  if (!isValid) {
+    $q.notify({ type: 'negative', message: 'Por favor, corrige los errores.' })
+    return
+  }
+
+  loading.value = true
   try {
-    if (isEditMode.value) {
-      await RentalService.updateRental(rental.value.id, rental.value)
-      $q.notify({ type: 'positive', message: 'Renta actualizada', position: 'top' })
-    } else {
-      await RentalService.createRental(rental.value)
-      $q.notify({ type: 'positive', message: 'Renta creada', position: 'top' })
+    const dataToSend = {
+      vehicleId: formData.value.vehicleId,
+      customerId: formData.value.customerId,
+      startDate: formData.value.startDate,
+      endDate: formData.value.endDate,
+      totalPrice: formData.value.totalPrice,
+      rentalStatus: formData.value.rentalStatus,
     }
-    router.push('/rentals')
-  } catch (e) {
-    console.error('Error al guardar la renta:', e)
-    $q.notify({
-      type: 'negative',
-      message: e.response?.data?.message || 'Error al guardar',
-      position: 'top',
-    })
+
+    if (isEditMode.value) {
+      await RentalService.updateRental(props.rentalToEdit.id, dataToSend)
+      $q.notify({ type: 'positive', message: 'Renta actualizada correctamente' })
+    } else {
+      await RentalService.createRental(dataToSend)
+      $q.notify({ type: 'positive', message: 'Renta creada correctamente' })
+    }
+
+    emit('rental-saved')
+  } catch (error) {
+    console.error('Error al guardar la renta:', error)
+    const errorMessage = error.response?.data?.message || 'Error al guardar la renta.'
+    $q.notify({ type: 'negative', message: errorMessage })
   } finally {
-    submitting.value = false
+    loading.value = false
   }
 }
-</script>
-<template>
-  <q-card class="q-pa-md">
-    <q-card-section>
-      <div class="text-h6">{{ isEditMode ? 'Editar Renta' : 'Nueva Renta' }}</div>
-    </q-card-section>
 
-    <q-card-section>
-      <q-form @submit.prevent="submitForm" class="q-gutter-md">
-        <q-select
-          v-model="rental.vehicleId"
-          :options="vehicles"
-          option-value="value"
-          option-label="label"
-          label="Vehículo *"
-          outlined
-          emit-value
-          map-options
-          :rules="[requiredRule]"
-          :loading="loadingVehicles"
-          :disable="submitting || (isEditMode && rental.rentalStatus !== 'ACTIVE')"
-        >
-          <template v-slot:option="scope">
-            <q-item v-bind="scope.itemProps">
-              <q-item-section>
-                <q-item-label>{{ scope.opt.label }}</q-item-label>
-                <q-item-label caption>{{ scope.opt.description }}</q-item-label>
-              </q-item-section>
-            </q-item>
-          </template>
-        </q-select>
-
-        <q-select
-          v-model="rental.customerId"
-          :options="customers"
-          option-value="value"
-          option-label="label"
-          label="Cliente *"
-          outlined
-          emit-value
-          map-options
-          :rules="[requiredRule]"
-          :loading="loadingCustomers"
-          :disable="submitting || (isEditMode && rental.rentalStatus !== 'ACTIVE')"
-        >
-          <template v-slot:option="scope">
-            <q-item v-bind="scope.itemProps">
-              <q-item-section>
-                <q-item-label>{{ scope.opt.label }}</q-item-label>
-                <q-item-label caption>{{ scope.opt.description }}</q-item-label>
-              </q-item-section>
-            </q-item>
-          </template>
-        </q-select>
-
-        <div class="row q-col-gutter-md">
-          <div class="col-12 col-sm-6">
-            <q-input
-              v-model="rental.startDate"
-              label="Fecha Inicio *"
-              outlined
-              :rules="[requiredRule]"
-              :disable="submitting || (isEditMode && rental.rentalStatus !== 'ACTIVE')"
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="rental.startDate"
-                      mask="YYYY-MM-DD"
-                      @update:model-value="updateEndDate"
-                    />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-
-          <div class="col-12 col-sm-6">
-            <q-input
-              v-model="rental.endDate"
-              label="Fecha Fin *"
-              outlined
-              :rules="[requiredRule, validateEndDate]"
-              :disable="submitting || (isEditMode && rental.rentalStatus !== 'ACTIVE')"
-            >
-              <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="rental.endDate"
-                      mask="YYYY-MM-DD"
-                      :options="(date) => isValidEndDate(date)"
-                    />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-        </div>
-
-        <div class="row items-center q-gutter-md">
-          <q-input
-            v-model.number="rental.totalPrice"
-            label="Precio Total *"
-            type="number"
-            outlined
-            min="0"
-            step="0.01"
-            prefix="$"
-            :rules="[priceRule]"
-            readonly
-            :disable="submitting"
-            class="col"
-          />
-          <q-btn
-            v-if="!isEditMode"
-            label="Calcular precio"
-            color="secondary"
-            @click="calculatePrice"
-            :disable="!canCalculatePrice || submitting"
-            class="q-ml-md"
-          />
-        </div>
-
-        <div class="q-mt-lg">
-          <q-btn
-            :label="isEditMode ? 'Guardar Cambios' : 'Crear Renta'"
-            type="submit"
-            color="primary"
-            :loading="submitting"
-            :disable="submitting || (isEditMode && rental.rentalStatus !== 'ACTIVE')"
-            class="q-mr-sm"
-          />
-          <q-btn label="Cancelar" @click="() => router.push('/rentals')" flat color="grey" />
-        </div>
-      </q-form>
-    </q-card-section>
-  </q-card>
-</template>
-
-<style scoped>
-.q-card {
-  max-width: 800px;
-  margin: auto;
+const onCancel = () => {
+  emit('cancel')
 }
+</script>
+
+<style scoped lang="scss">
+/* Tus estilos aquí */
 </style>
