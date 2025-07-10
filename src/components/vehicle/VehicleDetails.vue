@@ -73,6 +73,7 @@
 </template>
 
 <script>
+import { computed } from 'vue' // <-- Importa 'computed'
 import { date } from 'quasar'
 
 export default {
@@ -105,15 +106,16 @@ export default {
       return colors[status] || 'primary'
     }
 
-    const formattedCreatedAt = () => {
+    // Convertido a una propiedad computada
+    const formattedCreatedAt = computed(() => {
       if (props.vehicle?.createdAt) {
         return date.formatDate(props.vehicle.createdAt, 'D [de] MMMM [de] YYYY, h:mm A')
       }
       return 'N/A'
-    }
+    })
 
-    const statusDescription = getStatusDescription(props.vehicle?.status)
-    const badgeColor = getBadgeColor(props.vehicle?.status)
+    const statusDescription = computed(() => getStatusDescription(props.vehicle?.status)) // Convertido a computed para reactividad
+    const badgeColor = computed(() => getBadgeColor(props.vehicle?.status)) // Convertido a computed para reactividad
 
     const emitEditEvent = () => {
       emit('edit', props.vehicle)

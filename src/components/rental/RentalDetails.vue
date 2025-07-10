@@ -84,7 +84,7 @@
 </template>
 
 <script setup>
-import {  } from 'vue'
+import {} from 'vue'
 import { date } from 'quasar'
 
 const props = defineProps({
@@ -108,7 +108,8 @@ const formatCurrency = (value) =>
 
 const getStatusColor = (status) => {
   const statusColors = {
-    RENTED: 'positive',
+    PENDING: 'negative',
+    ACTIVE: 'positive',
     COMPLETED: 'primary',
     CANCELLED: 'negative',
   }

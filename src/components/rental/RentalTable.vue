@@ -216,7 +216,8 @@ const formatCurrency = (value) =>
 
 const getStatusColor = (status) => {
   const statusColors = {
-    RENTED: 'positive',
+    PENDING: 'negative',
+    ACTIVE: 'positive',
     COMPLETED: 'primary',
     CANCELLED: 'negative',
   }

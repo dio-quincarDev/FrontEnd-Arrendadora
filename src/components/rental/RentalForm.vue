@@ -68,7 +68,7 @@
               :rules="[(val) => !!val || 'Por favor, selecciona la fecha de inicio']"
             >
               <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
+                <q-icon name="sym_o_event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date
                       v-model="formData.startDate"
@@ -89,11 +89,13 @@
               dense
               :rules="[
                 (val) => !!val || 'Por favor, selecciona la fecha de fin',
-                (val) => isValidEndDate(val) || 'La fecha de fin debe ser posterior o igual a la de inicio',
+                (val) =>
+                  isValidEndDate(val) ||
+                  'La fecha de fin debe ser posterior o igual a la de inicio',
               ]"
             >
               <template v-slot:append>
-                <q-icon name="event" class="cursor-pointer">
+                <q-icon name="sym_o_event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date
                       v-model="formData.endDate"
@@ -166,7 +168,7 @@ const formData = ref({
   startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
   endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
   totalPrice: 0,
-  rentalStatus: 'RENTED', // Estado por defecto para nuevas rentas
+  rentalStatus: 'ACTIVE', // Estado por defecto para nuevas rentas
 })
 
 const vehicles = ref([])
@@ -195,16 +197,20 @@ watch(
         startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
         endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
         totalPrice: 0,
-        rentalStatus: 'RENTED',
+        rentalStatus: 'ACTIVE',
       }
     }
   },
   { immediate: true },
 )
 
-watch([() => formData.value.startDate, () => formData.value.endDate, () => formData.value.vehicleId], () => {
-  calculatePrice()
-}, { deep: true })
+watch(
+  [() => formData.value.startDate, () => formData.value.endDate, () => formData.value.vehicleId],
+  () => {
+    calculatePrice()
+  },
+  { deep: true },
+)
 
 async function loadVehicles() {
   loadingVehicles.value = true
@@ -257,11 +263,16 @@ async function loadCustomers() {
 }
 
 function isValidEndDate(dateStr) {
-  return dateStr && formData.value.startDate && new Date(dateStr) >= new Date(formData.value.startDate)
+  return (
+    dateStr && formData.value.startDate && new Date(dateStr) >= new Date(formData.value.startDate)
+  )
 }
 
 function updateEndDate() {
-  if (formData.value.startDate && new Date(formData.value.endDate) < new Date(formData.value.startDate)) {
+  if (
+    formData.value.startDate &&
+    new Date(formData.value.endDate) < new Date(formData.value.startDate)
+  ) {
     formData.value.endDate = date.formatDate(
       date.addToDate(new Date(formData.value.startDate), { days: 1 }),
       'YYYY-MM-DD',
