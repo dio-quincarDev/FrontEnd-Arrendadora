@@ -1,136 +1,144 @@
 <template>
-  <q-card>
+  <q-card v-if="vehicle" style="width: 500px; max-width: 90vw">
     <q-card-section>
-      <div class="text-h6">{{ vehicle?.brand }} {{ vehicle?.model }}</div>
-      <div>Año: {{ vehicle?.year }}</div>
-      <div>Placa: {{ vehicle?.plate }}</div>
-      <div>
-        Estado:
-        <q-badge :color="badgeColor">
-          {{ statusDescription }}
-        </q-badge>
-      </div>
-      <div>Creado: {{ formattedCreatedAt }}</div>
+      <div class="text-h6">Detalles de {{ vehicle.brand }} {{ vehicle.model }}</div>
     </q-card-section>
-    <q-card-actions>
-      <q-btn label="Editar" @click="goToEdit" color="primary" :disable="!vehicle?.id" />
-      <q-btn label="Volver" @click="goBack" flat />
+
+    <q-separator />
+
+    <q-card-section>
+      <q-list separator>
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Marca</q-item-label>
+            <q-item-label>{{ vehicle.brand }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Modelo</q-item-label>
+            <q-item-label>{{ vehicle.model }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Año</q-item-label>
+            <q-item-label>{{ vehicle.year }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Placa</q-item-label>
+            <q-item-label>{{ vehicle.plate }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Estado</q-item-label>
+            <q-item-label>
+              <q-badge :color="badgeColor">
+                {{ statusDescription }}
+              </q-badge>
+            </q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Creado</q-item-label>
+            <q-item-label>{{ formattedCreatedAt }}</q-item-label>
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </q-card-section>
+
+    <q-separator />
+
+    <q-card-actions align="right" class="q-pa-md">
+      <q-btn label="Cerrar" flat color="grey" @click="emitCloseEvent" />
+      <q-btn label="Editar" unelevated color="accent" @click="emitEditEvent" />
     </q-card-actions>
+  </q-card>
+
+  <q-card v-else class="text-center">
+    <q-card-section>
+      <div class="text-h6 text-grey-7">No se proporcionaron datos del vehículo.</div>
+      <q-icon name="sym_o_sentiment_dissatisfied" size="xl" color="grey-5" class="q-mt-md" />
+    </q-card-section>
   </q-card>
 </template>
 
 <script>
-import VehicleService from 'src/services/vehicle.service'
+import { computed } from 'vue' // <-- Importa 'computed'
 import { date } from 'quasar'
 
 export default {
   name: 'VehicleDetails',
-  data() {
-    return {
-      vehicle: {}, // Inicializado como objeto vacío para evitar errores de referencia inicial
-    }
+  props: {
+    vehicle: {
+      type: Object,
+      required: true,
+    },
   },
-  computed: {
-    statusDescription() {
-      // Usamos encadenamiento opcional para acceder a 'status' de forma segura
-      const status = this.vehicle?.status
+  emits: ['edit', 'close'],
+  setup(props, { emit }) {
+    const getStatusDescription = (status) => {
       const mapping = {
         AVAILABLE: 'Disponible',
         RENTED: 'Alquilado',
         MAINTENANCE: 'En Mantenimiento',
         OUT_OF_SERVICE: 'Fuera de Servicio',
       }
-      // Devuelve la descripción mapeada, el propio status si no se mapea, o 'Desconocido' si no hay status
       return mapping[status] || status || 'Desconocido'
-    },
-    badgeColor() {
-      // Usamos encadenamiento opcional para acceder a 'status' de forma segura
-      const status = this.vehicle?.status
+    }
+
+    const getBadgeColor = (status) => {
       const colors = {
         AVAILABLE: 'green',
         RENTED: 'blue',
         MAINTENANCE: 'orange',
         OUT_OF_SERVICE: 'grey',
       }
-      // Devuelve el color mapeado o 'primary' (azul por defecto en Quasar) si no hay status o no coincide
       return colors[status] || 'primary'
-    },
-    formattedCreatedAt() {
-      // Usamos encadenamiento opcional para acceder a 'createdAt' de forma segura
-      if (this.vehicle?.createdAt) {
-        return date.formatDate(this.vehicle.createdAt, 'YYYY-MM-DD HH:mm')
-      }
-      return '' // Devuelve cadena vacía si no hay fecha
-    },
-  },
-  async created() {
-    try {
-      // Obtenemos el ID del parámetro de la ruta
-      const vehicleId = this.$route.params.id
-      console.log('DEBUG (VehicleDetails): ID de la ruta:', vehicleId) // Confirma el ID que se está utilizando
-
-      // Verificación básica para asegurar que el ID no es nulo/indefinido
-      if (!vehicleId) {
-        console.error(
-          'DEBUG (VehicleDetails): ID de vehículo es nulo o indefinido. No se puede cargar.',
-        )
-        this.$q.notify({ type: 'negative', message: 'ID de vehículo no válido.' })
-        return // Detiene la ejecución si el ID es inválido
-      }
-
-      // Llama al servicio para obtener los detalles del vehículo
-      const response = await VehicleService.getVehicleById(vehicleId)
-
-      // --- ¡¡¡ESTE ES EL console.log CRÍTICO PARA DEPURACIÓN!!! ---
-      // Verificamos el contenido EXACTO del objeto 'response' completo antes de acceder a su 'data'
-      console.log('DEBUG (VehicleDetails): Objeto response COMPLETO del servicio:', response)
-      // --- Fin del console.log crítico ---
-
-      this.vehicle = response.data // Asigna la data de la respuesta a 'vehicle'
-
-      // Verificamos el contenido exacto de 'this.vehicle' después de la asignación
-      console.log(
-        'DEBUG (VehicleDetails): Contenido de this.vehicle DESPUÉS de la asignación:',
-        this.vehicle,
-      )
-
-      // Verificación para saber si el objeto 'vehicle' está vacío después de la carga
-      if (!this.vehicle || Object.keys(this.vehicle).length === 0) {
-        console.warn(
-          'DEBUG (VehicleDetails): El objeto vehicle está vacío o nulo después de cargar. Posiblemente no se encontró el ID en el backend.',
-        )
-        this.$q.notify({
-          type: 'warning',
-          message: 'No se encontraron detalles para este vehículo.',
-        })
-      }
-    } catch (error) {
-      console.error('DEBUG (VehicleDetails): Error al cargar los detalles del vehículo:', error)
-      // Notifica al usuario un error general y sugiere revisar la consola
-      this.$q.notify({
-        type: 'negative',
-        message:
-          'Error al cargar los detalles del vehículo. Verifique la consola para más información.',
-      })
     }
-  },
-  methods: {
-    goToEdit() {
-      // Usa el ID del objeto 'vehicle' cargado si está disponible, si no, usa el de la ruta
-      const idToEdit = this.vehicle?.id || this.$route.params.id
-      if (idToEdit) {
-        this.$router.push(`/vehicles/edit/${idToEdit}`)
-      } else {
-        console.error('DEBUG (VehicleDetails): No se pudo obtener un ID válido para editar.')
-        this.$q.notify({
-          type: 'negative',
-          message: 'No se puede editar: ID de vehículo no disponible.',
-        })
+
+    // Convertido a una propiedad computada
+    const formattedCreatedAt = computed(() => {
+      if (props.vehicle?.createdAt) {
+        return date.formatDate(props.vehicle.createdAt, 'D [de] MMMM [de] YYYY, h:mm A')
       }
-    },
-    goBack() {
-      this.$router.push('/vehicles')
-    },
+      return 'N/A'
+    })
+
+    const statusDescription = computed(() => getStatusDescription(props.vehicle?.status)) // Convertido a computed para reactividad
+    const badgeColor = computed(() => getBadgeColor(props.vehicle?.status)) // Convertido a computed para reactividad
+
+    const emitEditEvent = () => {
+      emit('edit', props.vehicle)
+    }
+
+    const emitCloseEvent = () => {
+      emit('close')
+    }
+
+    return {
+      statusDescription,
+      badgeColor,
+      formattedCreatedAt,
+      emitEditEvent,
+      emitCloseEvent,
+    }
   },
 }
 </script>
+
+<style scoped lang="scss">
+.q-item__label--overline {
+  font-size: 0.75rem;
+  color: $grey-7;
+}
+</style>

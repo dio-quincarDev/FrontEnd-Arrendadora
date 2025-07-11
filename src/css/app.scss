@@ -1,3 +1,5 @@
+@use "sass:color";
+
 // app global css in SCSS form
 
 // Importa las variables de Quasar SCSS
@@ -106,8 +108,8 @@ ol {
     border: 1px solid $accent !important;
 
     &:hover {
-      background-color: darken($accent, 5%) !important;
-      border-color: darken($accent, 5%) !important;
+      background-color: color.adjust($accent, $lightness: -5%) !important;
+      border-color: color.adjust($accent, $lightness: -5%) !important;
     }
   }
 

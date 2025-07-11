@@ -1,7 +1,7 @@
 <template>
   <!-- El componente es una q-card, ideal para diálogos. -->
   <!-- Verificamos que la prop 'customer' tenga datos antes de mostrar. -->
-  <q-card v-if="customer" style="width: 500px; max-width: 90vw;">
+  <q-card v-if="customer" style="width: 500px; max-width: 90vw">
     <q-card-section>
       <div class="text-h6">Detalles de {{ customer.name }}</div>
     </q-card-section>
@@ -67,7 +67,7 @@
   <q-card v-else class="text-center">
     <q-card-section>
       <div class="text-h6 text-grey-7">No se proporcionaron datos del cliente.</div>
-      <q-icon name="sentiment_dissatisfied" size="xl" color="grey-5" class="q-mt-md" />
+      <q-icon name="sym_o_sentiment_dissatisfied" size="xl" color="grey-5" class="q-mt-md" />
     </q-card-section>
   </q-card>
 </template>

@@ -1,89 +1,105 @@
-<script setup>
-import { ref, onMounted, computed } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { useQuasar, date } from 'quasar'
+<template>
+  <q-card v-if="rental" style="width: 500px; max-width: 90vw">
+    <q-card-section>
+      <div class="text-h6">Detalles de la Renta #{{ rental.id }}</div>
+    </q-card-section>
 
-// --- ASEGÚRATE QUE ESTAS RUTAS Y NOMBRES DE ARCHIVOS SON CORRECTOS ---
-import RentalService from 'src/services/rental.service'
-import VehicleService from 'src/services/vehicle.service'
-import CustomerService from 'src/services/customer.service'
-// -------------------------------------------------------------------
+    <q-separator />
+
+    <q-card-section>
+      <q-list separator>
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Estado</q-item-label>
+            <q-item-label>
+              <q-badge :color="getStatusColor(rental.rentalStatus)">
+                {{ rental.rentalStatus }}
+              </q-badge>
+            </q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Inicio</q-item-label>
+            <q-item-label>{{ formatDate(rental.startDate) }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Fin</q-item-label>
+            <q-item-label>{{ formatDate(rental.endDate) }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
+            <q-item-label overline>Precio Total</q-item-label>
+            <q-item-label>{{ formatCurrency(rental.totalPrice) }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item v-if="rental.createdAt">
+          <q-item-section>
+            <q-item-label overline>Creado</q-item-label>
+            <q-item-label>{{ formatDateTime(rental.createdAt) }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item v-if="rental.vehicle">
+          <q-item-section>
+            <q-item-label overline>Vehículo</q-item-label>
+            <q-item-label
+              >{{ rental.vehicle.brand }} {{ rental.vehicle.model }} ({{
+                rental.vehicle.plate
+              }})</q-item-label
+            >
+          </q-item-section>
+        </q-item>
+
+        <q-item v-if="rental.customer">
+          <q-item-section>
+            <q-item-label overline>Cliente</q-item-label>
+            <q-item-label>{{ rental.customer.name }} ({{ rental.customer.license }})</q-item-label>
+          </q-item-section>
+        </q-item>
+      </q-list>
+    </q-card-section>
+
+    <q-separator />
+
+    <q-card-actions align="right" class="q-pa-md">
+      <q-btn label="Cerrar" flat color="grey" @click="emitCloseEvent" />
+      <q-btn label="Editar" unelevated color="accent" @click="emitEditEvent" />
+    </q-card-actions>
+  </q-card>
+
+  <q-card v-else class="text-center">
+    <q-card-section>
+      <div class="text-h6 text-grey-7">No se proporcionaron datos de la renta.</div>
+      <q-icon name="sym_o_sentiment_dissatisfied" size="xl" color="grey-5" class="q-mt-md" />
+    </q-card-section>
+  </q-card>
+</template>
+
+<script setup>
+import {} from 'vue'
+import { date } from 'quasar'
 
 const props = defineProps({
-  rentalId: {
-    type: [String, Number],
+  rental: {
+    type: Object,
     required: true,
   },
 })
 
-const $q = useQuasar()
-const router = useRouter()
-const route = useRoute()
+const emit = defineEmits(['edit', 'close'])
 
-const rental = ref({})
-const vehicle = ref(null)
-const customer = ref(null)
-const loading = ref(true)
-const showCancelDialog = ref(false)
-const processing = ref(false)
-
-const isNewRental = computed(() => props.rentalId === 'new')
-
-onMounted(() => {
-  const currentRentalId = props.rentalId || route.params.id
-  if (currentRentalId && currentRentalId !== 'new') {
-    loadRentalDetails(currentRentalId)
-  } else {
-    loading.value = false
-    rental.value = {}
-  }
-})
-
-async function loadRentalDetails(idToLoad) {
-  loading.value = true
-  try {
-    const rentalResponse = await RentalService.getRentalById(idToLoad)
-    rental.value = rentalResponse.data
-
-    if (rental.value.vehicleId) {
-      const vehicleResponse = await VehicleService.getVehicleById(rental.value.vehicleId)
-      vehicle.value = vehicleResponse.data // Aquí vehicle.value podría ser undefined si vehicleResponse.data lo es
-    } else {
-      vehicle.value = null
-    }
-
-    if (rental.value.customerId) {
-      const customerResponse = await CustomerService.getCustomerById(rental.value.customerId)
-      customer.value = customerResponse // Aquí customer.value podría ser undefined si customerResponse.data lo es
-    } else {
-      customer.value = null
-    }
-
-    // --- DEPURACIÓN FINAL DE DATOS (CON CONSOLE.LOGS ROBUSTOS) ---
-    console.log('--- RENTAL DETAILS (FINAL DEBUG) ---')
-    console.log('1. ID de la ruta (actual):', idToLoad)
-    console.log('2. Data de la Renta (rental.value):', rental.value) // <-- Logguea directamente
-    console.log('3. Data del Vehículo (vehicle.value):', vehicle.value) // <-- Logguea directamente
-    console.log('4. Data del Cliente (customer.value):', customer.value) // <-- Logguea directamente
-    console.log('------------------------------------')
-    // --- FIN DEPURACIÓN FINAL ---
-  } catch (error) {
-    console.error('Error al cargar detalles de la renta:', error)
-    $q.notify({
-      type: 'negative',
-      message: `Error al cargar los detalles. ${error.message || 'La renta podría no existir.'}`,
-      position: 'top',
-    })
-    // Aquí puedes decidir si redirigir o no.
-    // router.push('/rentals')
-  } finally {
-    loading.value = false
-  }
-}
-
-const formatDate = (dateString) => (dateString ? date.formatDate(dateString, 'DD/MM/YYYY') : '')
+const formatDate = (dateString) =>
+  dateString ? date.formatDate(dateString, 'D [de] MMMM [de] YYYY') : 'N/A'
 const formatDateTime = (dateString) =>
-  dateString ? date.formatDate(dateString, 'DD/MM/YYYY HH:mm') : ''
+  dateString ? date.formatDate(dateString, 'D [de] MMMM [de] YYYY, h:mm A') : 'N/A'
 const formatCurrency = (value) =>
   new Intl.NumberFormat('en-US', {
     style: 'currency',
@@ -92,200 +108,26 @@ const formatCurrency = (value) =>
 
 const getStatusColor = (status) => {
   const statusColors = {
-    RENTED: 'positive',
+    PENDING: 'negative',
+    ACTIVE: 'positive',
     COMPLETED: 'primary',
     CANCELLED: 'negative',
   }
   return statusColors[status] || 'grey'
 }
 
-async function confirmCancel() {
-  processing.value = true
-  try {
-    await RentalService.cancelRental(props.rentalId)
-    $q.notify({
-      type: 'positive',
-      message: 'Renta cancelada correctamente',
-      position: 'top',
-    })
-    await loadRentalDetails(props.rentalId)
-  } catch (error) {
-    console.error('Error al cancelar la renta:', error)
-    $q.notify({
-      type: 'negative',
-      message: 'Error al cancelar la renta',
-      position: 'top',
-    })
-  } finally {
-    showCancelDialog.value = false
-    processing.value = false
-  }
+const emitEditEvent = () => {
+  emit('edit', props.rental)
 }
 
-const goToEdit = () => router.push(`/rentals/edit/${props.rentalId}`)
-const goBack = () => router.push('/rentals')
+const emitCloseEvent = () => {
+  emit('close')
+}
 </script>
 
-<template>
-  <q-card class="q-pa-md rental-details-card">
-    <q-card-section>
-      <div class="text-h6">
-        <template v-if="isNewRental"> Nueva Renta </template>
-        <template v-else> Detalles de la Renta #{{ rental.id }} </template>
-      </div>
-      <q-separator class="q-my-md" />
-
-      <template v-if="loading">
-        <div class="text-center q-my-md">
-          <q-spinner color="primary" size="3em" />
-          <div class="q-mt-sm">Cargando detalles...</div>
-        </div>
-      </template>
-
-      <template v-else>
-        <div v-if="isNewRental" class="text-center q-my-lg text-grey-7">
-          Este componente está diseñado para **ver los detalles** de una renta existente.<br />
-          Para crear una nueva renta, por favor, navegue a la sección de **creación de rentas**.
-        </div>
-
-        <div v-else-if="rental.id" class="row q-col-gutter-md">
-          <div class="col-12 col-md-6">
-            <q-list bordered separator>
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption>Estado</q-item-label>
-                  <q-item-label>
-                    <q-badge :color="getStatusColor(rental.rentalStatus)">
-                      {{ rental.rentalStatus }}
-                    </q-badge>
-                  </q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption>Inicio</q-item-label>
-                  <q-item-label>{{ formatDate(rental.startDate) }}</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption>Fin</q-item-label>
-                  <q-item-label>{{ formatDate(rental.endDate) }}</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item>
-                <q-item-section>
-                  <q-item-label caption>Precio</q-item-label>
-                  <q-item-label>{{ formatCurrency(rental.totalPrice) }}</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item v-if="rental.createdAt">
-                <q-item-section>
-                  <q-item-label caption>Creado</q-item-label>
-                  <q-item-label>{{ formatDateTime(rental.createdAt) }}</q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </div>
-
-          <div class="col-12 col-md-6">
-            <q-card v-if="vehicle" flat bordered class="q-mb-md">
-              <q-card-section>
-                <div class="text-subtitle2">Vehículo</div>
-                <q-separator class="q-my-sm" />
-                <div class="text-h6">
-                  {{ vehicle.model }}
-                </div>
-                <div class="q-mt-sm">
-                  <span>Placa: {{ vehicle.plate || 'N/A' }}</span>
-                </div>
-                <div>
-                  Tarifa diaria:
-                  {{
-                    vehicle.dailyRate != null ? formatCurrency(vehicle.dailyRate) : 'No disponible'
-                  }}
-                </div>
-              </q-card-section>
-            </q-card>
-            <div v-else class="text-grey-7 q-mb-md">No hay información de vehículo disponible.</div>
-
-            <q-card v-if="customer" flat bordered>
-              <q-card-section>
-                <div class="text-subtitle2">Cliente</div>
-                <q-separator class="q-my-sm" />
-                <div class="text-h6">{{ customer.name }}</div>
-                <div>Licencia: {{ customer.license || 'N/A' }}</div>
-                <div>Celular: {{ customer.phone || 'N/A' }}</div>
-              </q-card-section>
-            </q-card>
-            <div v-else class="text-grey-7">No hay información de cliente disponible.</div>
-          </div>
-        </div>
-        <div v-else class="text-center q-my-lg text-grey-7">
-          No se encontraron detalles para la renta especificada.
-        </div>
-      </template>
-    </q-card-section>
-
-    <q-card-actions align="right">
-      <template v-if="!isNewRental && rental.id">
-        <q-btn
-          v-if="rental.rentalStatus === 'RENTED'"
-          label="Cancelar"
-          color="orange"
-          @click="showCancelDialog = true"
-          class="q-mr-sm"
-          :disable="processing"
-        />
-        <q-btn
-          v-if="rental.rentalStatus === 'RENTED'"
-          label="Editar"
-          color="primary"
-          @click="goToEdit"
-          class="q-mr-sm"
-        />
-      </template>
-      <q-btn flat label="Volver" @click="goBack" />
-    </q-card-actions>
-
-    <q-dialog v-model="showCancelDialog">
-      <q-card style="min-width: 350px">
-        <q-card-section class="text-h6">Confirmar cancelación</q-card-section>
-        <q-card-section>
-          ¿Está seguro que desea cancelar esta renta? Esta acción no se puede deshacer.
-        </q-card-section>
-        <q-card-actions align="right">
-          <q-btn flat label="No" v-close-popup />
-          <q-btn
-            flat
-            label="Sí, cancelar"
-            color="orange"
-            @click="confirmCancel"
-            :loading="processing"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-  </q-card>
-</template>
-
-<style scoped>
-.rental-details-card {
-  max-width: 1000px;
-  margin: auto;
-}
-
-@media (max-width: 600px) {
-  .rental-details-card {
-    padding: 12px;
-  }
-
-  .text-h6 {
-    font-size: 1.1rem;
-  }
+<style scoped lang="scss">
+.q-item__label--overline {
+  font-size: 0.75rem;
+  color: $grey-7;
 }
 </style>

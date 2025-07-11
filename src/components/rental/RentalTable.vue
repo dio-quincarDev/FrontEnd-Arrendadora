@@ -1,13 +1,156 @@
+<template>
+  <q-card flat class="q-pa-md">
+    <q-card-section>
+      <div class="row items-center q-gutter-md">
+        <div class="col">
+          <h2 class="text-h5 text-dark q-my-none">Gestión de Rentas</h2>
+          <p class="text-grey-7 q-mb-none">Aquí puedes administrar todas tus rentas.</p>
+        </div>
+      </div>
+    </q-card-section>
+
+    <q-card-section class="q-pa-none">
+      <q-table
+        :rows="rentals"
+        :columns="columns"
+        row-key="id"
+        :loading="loading"
+        :pagination="pagination"
+        flat
+      >
+        <template #body-cell-startDate="props">
+          <q-td :props="props">
+            {{ formatDate(props.row.startDate) }}
+          </q-td>
+        </template>
+
+        <template #body-cell-endDate="props">
+          <q-td :props="props">
+            {{ formatDate(props.row.endDate) }}
+          </q-td>
+        </template>
+
+        <template #body-cell-totalPrice="props">
+          <q-td :props="props">
+            {{ formatCurrency(props.row.totalPrice) }}
+          </q-td>
+        </template>
+
+        <template #body-cell-rentalStatus="props">
+          <q-td :props="props">
+            <q-badge :color="getStatusColor(props.row.rentalStatus)">
+              {{ props.row.rentalStatus }}
+            </q-badge>
+          </q-td>
+        </template>
+
+        <template #body-cell-actions="props">
+          <q-td :props="props" class="action-buttons">
+            <q-btn
+              icon="sym_o_info"
+              color="info"
+              flat
+              round
+              dense
+              @click="emitDetailsEvent(props.row)"
+            >
+              <q-tooltip>Ver Detalles</q-tooltip>
+            </q-btn>
+            <q-btn
+              icon="sym_o_edit"
+              color="primary"
+              flat
+              round
+              dense
+              @click="emitEditEvent(props.row)"
+              :disable="props.row.rentalStatus === 'CANCELLED'"
+            >
+              <q-tooltip>Editar Renta</q-tooltip>
+            </q-btn>
+            <q-btn
+              icon="sym_o_cancel"
+              color="orange"
+              flat
+              round
+              dense
+              @click="confirmCancel(props.row)"
+              :disable="props.row.rentalStatus !== 'RENTED'"
+            >
+              <q-tooltip>Cancelar Renta</q-tooltip>
+            </q-btn>
+            <q-btn
+              v-if="isAdmin"
+              icon="sym_o_delete"
+              color="negative"
+              flat
+              round
+              dense
+              @click="confirmDelete(props.row)"
+              :disable="props.row.rentalStatus === 'RENTED'"
+            >
+              <q-tooltip>Eliminar Renta</q-tooltip>
+            </q-btn>
+          </q-td>
+        </template>
+      </q-table>
+    </q-card-section>
+  </q-card>
+
+  <q-dialog v-model="showCancelDialog" persistent>
+    <q-card>
+      <q-card-section class="row items-center">
+        <q-avatar icon="sym_o_warning" color="warning" text-color="white" class="q-mr-md" />
+        <span class="q-ml-sm">
+          ¿Estás seguro de que quieres cancelar la renta
+          <strong>#{{ cancelRentalId }}</strong
+          >? Esta acción no se puede deshacer.
+        </span>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Cancelar" color="grey" v-close-popup />
+        <q-btn
+          label="Confirmar"
+          color="orange"
+          unelevated
+          @click="confirmCancelAction"
+          :loading="processing"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+
+  <q-dialog v-model="showDeleteDialog" persistent>
+    <q-card>
+      <q-card-section class="row items-center">
+        <q-avatar icon="sym_o_warning" color="warning" text-color="white" class="q-mr-md" />
+        <span class="q-ml-sm">
+          ¿Estás seguro de que quieres eliminar la renta
+          <strong>#{{ deleteRentalId }}</strong
+          >? Esta acción no se puede deshacer.
+        </span>
+      </q-card-section>
+      <q-card-actions align="right">
+        <q-btn flat label="Cancelar" color="grey" v-close-popup />
+        <q-btn
+          label="Eliminar"
+          color="negative"
+          unelevated
+          @click="confirmDeleteAction"
+          :loading="processing"
+        />
+      </q-card-actions>
+    </q-card>
+  </q-dialog>
+</template>
+
 <script setup>
-import { ref, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, onMounted, computed } from 'vue'
 import { useQuasar, date } from 'quasar'
 import RentalService from 'src/services/rental.service'
+import { jwtDecode } from 'jwt-decode'
 
-const router = useRouter()
 const $q = useQuasar()
 
-// Reactive state
 const rentals = ref([])
 const loading = ref(false)
 const processing = ref(false)
@@ -16,11 +159,7 @@ const showDeleteDialog = ref(false)
 const cancelRentalId = ref(null)
 const deleteRentalId = ref(null)
 
-// Table configuration
 const columns = [
-  // { name: 'id', label: 'ID', field: 'id', align: 'left', sortable: true }, // Omitido
-  // { name: 'vehicleId', label: 'ID Vehículo', field: 'vehicleId', align: 'left', sortable: true }, // Omitido
-  // { name: 'customerId', label: 'ID Cliente', field: 'customerId', align: 'left', sortable: true }, // Omitido
   { name: 'customerName', label: 'Cliente', field: 'customerName', align: 'left', sortable: true },
   { name: 'vehicleBrand', label: 'Marca', field: 'vehicleBrand', align: 'left', sortable: true },
   { name: 'vehicleModel', label: 'Modelo', field: 'vehicleModel', align: 'left', sortable: true },
@@ -45,24 +184,66 @@ const pagination = ref({
   rowsNumber: 0,
 })
 
-// Lifecycle hooks
+const isAdmin = computed(() => {
+  const token = localStorage.getItem('authToken')
+  if (!token) {
+    return false
+  }
+  try {
+    const decodedToken = jwtDecode(token)
+    const userRole = decodedToken.role || ''
+    return userRole === 'ADMIN'
+  } catch (error) {
+    console.error('Error al decodificar el token:', error)
+    return false
+  }
+})
+
 onMounted(() => {
   loadRentals()
 })
 
-// Data functions
-// Data functions
+const refresh = async () => {
+  await loadRentals()
+}
+
+const formatDate = (dateString) => date.formatDate(dateString, 'DD/MM/YYYY')
+const formatCurrency = (value) =>
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currency: 'USD',
+  }).format(value)
+
+const getStatusColor = (status) => {
+  const statusColors = {
+    PENDING: 'negative',
+    ACTIVE: 'positive',
+    COMPLETED: 'primary',
+    CANCELLED: 'negative',
+  }
+  return statusColors[status] || 'grey'
+}
+
+const emit = defineEmits(['edit-rental', 'view-details'])
+
+const emitEditEvent = (rental) => {
+  emit('edit-rental', rental)
+}
+
+const emitDetailsEvent = (rental) => {
+  emit('view-details', rental)
+}
+
 async function loadRentals() {
   loading.value = true
   try {
     const response = await RentalService.getRentals()
-    console.log('Respuesta de getRentals:', response) // Inspecciona la respuesta completa
     if (Array.isArray(response.data)) {
       rentals.value = response.data
       pagination.value.rowsNumber = response.data.length
     } else {
       console.error('Error: La respuesta de getRentals no es un array:', response.data)
-      rentals.value = [] // Inicializa como array vacío en caso de error en la estructura
+      rentals.value = []
       pagination.value.rowsNumber = 0
       $q.notify({
         type: 'negative',
@@ -70,10 +251,9 @@ async function loadRentals() {
         position: 'top',
       })
     }
-    console.log('Rentals data:', rentals.value) // Para debugging
   } catch (error) {
     console.error('Error loading rentals:', error)
-    rentals.value = [] // Inicializa como array vacío en caso de error en la llamada
+    rentals.value = []
     pagination.value.rowsNumber = 0
     $q.notify({
       type: 'negative',
@@ -85,36 +265,14 @@ async function loadRentals() {
   }
 }
 
-// Utility functions
-const formatDate = (dateString) => date.formatDate(dateString, 'DD/MM/YYYY')
-const formatCurrency = (value) =>
-  new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currency: 'USD',
-  }).format(value)
-
-const getStatusColor = (status) => {
-  const statusColors = {
-    ACTIVE: 'positive',
-    COMPLETED: 'primary',
-    CANCELLED: 'negative',
-  }
-  return statusColors[status] || 'grey'
+const confirmCancel = (row) => {
+  cancelRentalId.value = row.id
+  showCancelDialog.value = true
 }
 
-// Navigation functions
-const goToEdit = (id) => router.push(`/rentals/edit/${id}`)
-const goToDetails = (id) => router.push(`/rentals/${id}`)
-
-// Action handlers
 const confirmDelete = (row) => {
   deleteRentalId.value = row.id
   showDeleteDialog.value = true
-}
-
-const cancelRental = (id) => {
-  cancelRentalId.value = id
-  showCancelDialog.value = true
 }
 
 async function confirmCancelAction() {
@@ -162,181 +320,12 @@ async function confirmDeleteAction() {
     processing.value = false
   }
 }
+
+defineExpose({ refresh })
 </script>
 
-<template>
-  <div class="rental-table-container">
-    <q-table
-      title="Gestión de Rentas"
-      :rows="rentals"
-      :columns="columns"
-      row-key="id"
-      :loading="loading"
-      :pagination="pagination"
-      class="rental-table"
-    >
-      <template #top>
-        <div class="text-h6">Gestión de Rentas</div>
-        <q-space />
-        <q-btn
-          color="primary"
-          icon="add"
-          label="Nueva Renta"
-          @click="router.push('/rentals/create')"
-        />
-      </template>
-
-      <template #body-cell-startDate="props">
-        <q-td :props="props">
-          {{ formatDate(props.row.startDate) }}
-        </q-td>
-      </template>
-
-      <template #body-cell-endDate="props">
-        <q-td :props="props">
-          {{ formatDate(props.row.endDate) }}
-        </q-td>
-      </template>
-
-      <template #body-cell-totalPrice="props">
-        <q-td :props="props">
-          {{ formatCurrency(props.row.totalPrice) }}
-        </q-td>
-      </template>
-
-      <template #body-cell-rentalStatus="props">
-        <q-td :props="props">
-          <q-badge :color="getStatusColor(props.row.rentalStatus)">
-            {{ props.row.rentalStatus }}
-          </q-badge>
-        </q-td>
-      </template>
-
-      <template #body-cell-actions="props">
-        <q-td :props="props" class="action-buttons">
-          <q-btn flat round icon="visibility" @click="goToDetails(props.row.id)" size="sm" />
-          <q-btn
-            flat
-            round
-            icon="edit"
-            @click="goToEdit(props.row.id)"
-            size="sm"
-            :disable="props.row.rentalStatus === 'CANCELLED'"
-          />
-          <q-btn
-            flat
-            round
-            icon="cancel"
-            color="orange"
-            @click="cancelRental(props.row.id)"
-            size="sm"
-            :disable="props.row.rentalStatus !== 'ACTIVE'"
-          />
-          <q-btn
-            flat
-            round
-            icon="delete"
-            color="negative"
-            @click="confirmDelete(props.row)"
-            size="sm"
-            :disable="props.row.rentalStatus === 'ACTIVE'"
-          />
-        </q-td>
-      </template>
-    </q-table>
-
-    <q-dialog v-model="showCancelDialog">
-      <q-card class="confirmation-dialog">
-        <q-card-section class="dialog-header">
-          <div class="text-h6">Confirmar cancelación</div>
-        </q-card-section>
-
-        <q-card-section class="dialog-content">
-          ¿Está seguro que desea cancelar esta renta?
-        </q-card-section>
-
-        <q-card-actions align="right" class="dialog-actions">
-          <q-btn flat label="Cancelar" v-close-popup />
-          <q-btn
-            flat
-            label="Confirmar"
-            color="orange"
-            @click="confirmCancelAction"
-            :loading="processing"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-
-    <q-dialog v-model="showDeleteDialog">
-      <q-card class="confirmation-dialog">
-        <q-card-section class="dialog-header">
-          <div class="text-h6">Confirmar eliminación</div>
-        </q-card-section>
-
-        <q-card-section class="dialog-content">
-          ¿Está seguro que desea eliminar esta renta?
-        </q-card-section>
-
-        <q-card-actions align="right" class="dialog-actions">
-          <q-btn flat label="Cancelar" v-close-popup />
-          <q-btn
-            flat
-            label="Eliminar"
-            color="negative"
-            @click="confirmDeleteAction"
-            :loading="processing"
-          />
-        </q-card-actions>
-      </q-card>
-    </q-dialog>
-  </div>
-</template>
-
-<style scoped>
-.rental-table-container {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.rental-table {
-  width: 100%;
-}
-
+<style scoped lang="scss">
 .action-buttons {
   white-space: nowrap;
-}
-
-.confirmation-dialog {
-  min-width: 350px;
-}
-
-.dialog-header {
-  padding-bottom: 16px;
-}
-
-.dialog-content {
-  padding-top: 0;
-  padding-bottom: 24px;
-}
-
-.dialog-actions {
-  padding: 8px 16px;
-}
-
-@media (max-width: 600px) {
-  .rental-table {
-    font-size: 0.9rem;
-  }
-
-  .action-buttons button {
-    padding: 4px;
-    min-width: 32px;
-  }
-
-  .confirmation-dialog {
-    min-width: 280px;
-  }
 }
 </style>

@@ -52,7 +52,7 @@
 
         <template v-slot:no-data="{ filter }">
           <div class="full-width row flex-center text-accent q-gutter-sm q-pa-lg">
-            <q-icon size="2em" name="sentiment_dissatisfied" />
+            <q-icon size="2em" name="sym_o_sentiment_dissatisfied" />
             <span>
               No hay clientes disponibles.
               <span v-if="filter"> para la búsqueda "{{ filter }}"</span>
@@ -67,11 +67,11 @@
   <q-dialog v-model="showDialog" persistent>
     <q-card>
       <q-card-section class="row items-center">
-        <q-avatar icon="warning" color="warning" text-color="white" class="q-mr-md" />
+        <q-avatar icon="sym_o_warning" color="warning" text-color="white" class="q-mr-md" />
         <span class="q-ml-sm">
           ¿Estás seguro de que quieres eliminar al cliente
-          <strong>"{{ customerToDelete ? customerToDelete.name : '' }}"</strong>? Esta acción no
-          se puede deshacer.
+          <strong>"{{ customerToDelete ? customerToDelete.name : '' }}"</strong>? Esta acción no se
+          puede deshacer.
         </span>
       </q-card-section>
       <q-card-actions align="right">
@@ -176,7 +176,7 @@ export default {
   methods: {
     // AÑADIDO: Un método público que el padre puede llamar para refrescar la tabla.
     async refresh() {
-      await this.loadCustomers();
+      await this.loadCustomers()
     },
     async loadCustomers() {
       this.loading = true

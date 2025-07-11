@@ -1,6 +1,6 @@
 <template>
   <!-- El componente ahora es una q-card para ser usado en un diálogo -->
-  <q-card style="width: 500px; max-width: 90vw;">
+  <q-card style="width: 500px; max-width: 90vw">
     <q-card-section>
       <!-- Título dinámico -->
       <div class="text-h6">{{ isEditMode ? 'Editar Cliente' : 'Crear Nuevo Cliente' }}</div>
@@ -121,7 +121,7 @@ export default {
           }
         }
       },
-      { immediate: true } // 'immediate' ejecuta el watch en cuanto el componente se crea
+      { immediate: true }, // 'immediate' ejecuta el watch en cuanto el componente se crea
     )
 
     // Reglas de validación (sin cambios)
@@ -131,7 +131,8 @@ export default {
     ]
     const phoneRules = [
       (val) => !!val || 'Por favor, ingresa el teléfono',
-      (val) => /^\d{7,15}$/.test(val) || 'Formato de teléfono inválido (7-15 dígitos)',
+      (val) =>
+        /^\+\d{1,3}\d{8,16}$/.test(val) || 'Formato de teléfono inválido  (ej: +5076XXXXXXX)',
     ]
 
     // CAMBIO: La lógica de submit ahora está en el setup

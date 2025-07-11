@@ -10,8 +10,8 @@
           <div class="col-12 col-md-3">
             <metric-card
               title="Total de Alquileres"
-              icon="directions_car_filled"
-              color="deep-purple"
+              icon="sym_o_receipt_long"
+              color="accent"
               :value="dashboardData.totalRentals"
               :loading="loading"
             />
@@ -20,8 +20,8 @@
           <div class="col-12 col-md-3">
             <metric-card
               title="Ingresos Totales"
-              icon="payments"
-              color="green-8"
+              icon="sym_o_payments"
+              color="positive"
               :value="dashboardData.totalRevenue"
               :isCurrency="true"
               :loading="loading"
@@ -31,8 +31,8 @@
           <div class="col-12 col-md-3">
             <metric-card
               title="Vehículos Disponibles"
-              icon="local_parking"
-              color="orange-8"
+              icon="sym_o_local_parking"
+              color="info"
               :value="dashboardData.availableVehicles"
               :loading="loading"
             />
@@ -41,8 +41,8 @@
           <div class="col-12 col-md-3">
             <metric-card
               title="Clientes Activos"
-              icon="group"
-              color="blue-8"
+              icon="sym_o_group"
+              color="primary"
               :value="dashboardData.activeCustomers"
               :loading="loading"
             />
@@ -51,8 +51,8 @@
           <div class="col-12 col-md-3">
             <metric-card
               title="Nuevos Clientes"
-              icon="person_add"
-              color="indigo-8"
+              icon="sym_o_person_add"
+              color="accent"
               :value="dashboardData.newCustomers"
               :loading="loading"
             />
@@ -61,8 +61,8 @@
           <div class="col-12 col-md-3">
             <metric-card
               title="Clientes Únicos"
-              icon="diversity_3"
-              color="purple-8"
+              icon="sym_o_diversity_3"
+              color="secondary"
               :value="dashboardData.uniqueCustomers"
               :loading="loading"
             />
@@ -71,8 +71,8 @@
           <div class="col-12 col-md-3">
             <metric-card
               title="Duración Promedio Alquiler (días)"
-              icon="hourglass_top"
-              color="teal-8"
+              icon="sym_o_hourglass_top"
+              color="info"
               :value="dashboardData.averageRentalDuration"
               :loading="loading"
             />
@@ -81,8 +81,8 @@
           <div class="col-12 col-md-3">
             <metric-card
               title="Vehículo Más Alquilado"
-              icon="directions_car"
-              color="red-8"
+              icon="sym_o_directions_car"
+              color="negative"
               :loading="loading"
             >
               <template v-if="!loading">
@@ -163,11 +163,11 @@
       <div class="col-12 q-mt-lg text-center">
         <q-btn
           label="Descargar Reporte"
-          icon="download"
+          icon="sym_o_download"
           color="secondary"
           @click="handleDownloadReport"
           :loading="downloading"
-          unelevated
+          outline
         />
       </div>
     </div>
