@@ -74,6 +74,7 @@
                       v-model="formData.startDate"
                       mask="YYYY-MM-DD"
                       @update:model-value="updateEndDate"
+                      color="accent"
                     />
                   </q-popup-proxy>
                 </q-icon>
@@ -101,6 +102,7 @@
                       v-model="formData.endDate"
                       mask="YYYY-MM-DD"
                       :options="(date) => isValidEndDate(date)"
+                      color="accent"
                     />
                   </q-popup-proxy>
                 </q-icon>
