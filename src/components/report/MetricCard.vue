@@ -19,7 +19,7 @@ import { computed, useSlots } from 'vue'
 
 const props = defineProps({
   title: { type: String, required: true },
-  icon: { type: String, required: false, default: 'insights' },
+  icon: { type: String, required: false, default: 'sym_o_insights' },
   color: { type: String, default: '' },
   value: { type: [Number, String, null], default: null }, // 'value' ya NO espera Objetos aquí
   isCurrency: { type: Boolean, default: false },

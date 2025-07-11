@@ -45,7 +45,7 @@
             readonly
           >
             <template v-slot:append>
-              <q-icon name="event" class="cursor-pointer">
+              <q-icon name="sym_o_event" class="cursor-pointer">
                 <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                   <q-date
                     v-model="dateRange"
@@ -101,7 +101,7 @@
           <q-btn
             color="primary"
             label="Aplicar Filtros"
-            icon="filter_alt"
+            icon="sym_o_filter_alt"
             @click="emitFilters"
             :loading="props.loading"
             class="full-width q-py-sm"
@@ -143,11 +143,11 @@ const reportTypeToDownload = ref('RENTAL_SUMMARY') // Valor por defecto para el 
 
 // Opciones de periodo
 const periodOptions = [
-  { label: 'Todo el Tiempo', value: 'ALL_TIME', icon: 'history' },
-  { label: 'Diario', value: 'DAILY', icon: 'event_available' },
-  { label: 'Semanal', value: 'WEEKLY', icon: 'date_range' },
-  { label: 'Mensual', value: 'MONTHLY', icon: 'calendar_month' },
-  { label: 'Trimestral', value: 'QUARTERLY', icon: 'event_repeat' },
+  { label: 'Todo el Tiempo', value: 'ALL_TIME', icon: 'sym_o_history' },
+  { label: 'Diario', value: 'DAILY', icon: 'sym_o_event_available' },
+  { label: 'Semanal', value: 'WEEKLY', icon: 'sym_o_date_range' },
+  { label: 'Mensual', value: 'MONTHLY', icon: 'sym_o_calendar_month' },
+  { label: 'Trimestral', value: 'QUARTERLY', icon: 'sym_o_event_repeat' },
 ]
 
 // Opciones de tipo de reporte a descargar (basado en tu backend)
