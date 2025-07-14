@@ -1,6 +1,6 @@
 <template>
   <q-card class="metric-card" :class="`bg-${color}`">
-    <q-card-section class="q-pa-md text-white">
+    <q-card-section class="q-pa-md" :class="color ? 'text-white' : 'text-dark'">
       <div class="row items-center no-wrap q-mb-sm">
         <q-icon :name="icon || 'insights'" size="md" class="q-mr-sm" />
         <div class="text-subtitle2">{{ title }}</div>
