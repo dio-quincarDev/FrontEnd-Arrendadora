@@ -45,18 +45,18 @@ const hasData = computed(() => {
 
 // Paleta de colores para gráficos
 const CHART_COLORS = [
-  '#5470C6',
-  '#91CC75',
-  '#EE6666',
-  '#FC8452',
-  '#9A60B4',
-  '#EA7CCC', // Colores primarios y cálidos
-  '#73C0DE',
-  '#3BA272',
-  '#FCBF49',
-  '#F79256',
-  '#D4ADFF',
-  '#F9E7D2', // Tonos secundarios y pasteles
+  '#42A5F5', // Azul claro
+  '#66BB6A', // Verde
+  '#FFA726', // Naranja
+  '#EF5350', // Rojo
+  '#AB47BC', // Púrpura
+  '#78909C', // Gris azulado
+  '#26A69A', // Teal
+  '#FFCA28', // Ámbar
+  '#5C6BC0', // Índigo
+  '#EC407A', // Rosa
+  '#7E57C2', // Violeta
+  '#BDBDBD', // Gris
 ]
 
 // Computed para opciones de ECharts

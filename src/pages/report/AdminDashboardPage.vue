@@ -11,7 +11,7 @@
             <metric-card
               title="Total de Alquileres"
               icon="sym_o_receipt_long"
-              color="accent"
+              color="blue-grey-10"
               :value="dashboardData.totalRentals"
               :loading="loading"
             />
@@ -21,7 +21,7 @@
             <metric-card
               title="Ingresos Totales"
               icon="sym_o_payments"
-              color="positive"
+              color="green-10"
               :value="dashboardData.totalRevenue"
               :isCurrency="true"
               :loading="loading"
@@ -32,7 +32,7 @@
             <metric-card
               title="Vehículos Disponibles"
               icon="sym_o_local_parking"
-              color="info"
+              color="dark"
               :value="dashboardData.availableVehicles"
               :loading="loading"
             />
@@ -42,7 +42,7 @@
             <metric-card
               title="Clientes Activos"
               icon="sym_o_group"
-              color="primary"
+              color="grey-10"
               :value="dashboardData.activeCustomers"
               :loading="loading"
             />
@@ -52,7 +52,7 @@
             <metric-card
               title="Nuevos Clientes"
               icon="sym_o_person_add"
-              color="accent"
+              color="brown-10"
               :value="dashboardData.newCustomers"
               :loading="loading"
             />
@@ -62,7 +62,7 @@
             <metric-card
               title="Clientes Únicos"
               icon="sym_o_diversity_3"
-              color="secondary"
+              color="deep-purple-10"
               :value="dashboardData.uniqueCustomers"
               :loading="loading"
             />
@@ -72,7 +72,7 @@
             <metric-card
               title="Duración Promedio Alquiler (días)"
               icon="sym_o_hourglass_top"
-              color="info"
+              color="blue-grey-10"
               :value="dashboardData.averageRentalDuration"
               :loading="loading"
             />
@@ -82,7 +82,7 @@
             <metric-card
               title="Vehículo Más Alquilado"
               icon="sym_o_directions_car"
-              color="negative"
+              color="red-10"
               :loading="loading"
             >
               <template v-if="!loading">
