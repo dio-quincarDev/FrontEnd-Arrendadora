@@ -3,7 +3,7 @@
     <!-- 1. Sección de Bienvenida y Métricas -->
     <div class="row items-center justify-between q-mb-md">
       <h1 class="text-h4 text-weight-bold text-primary q-my-none">
-        Bienvenido, {{ userName || 'Usuario' }}
+        Bienvenido
       </h1>
       <div class="text-grey-7">{{ formattedDate }}</div>
     </div>
@@ -85,7 +85,7 @@
 
 <script setup>
 import { ref, onMounted, computed } from 'vue'
-import { jwtDecode } from 'jwt-decode'
+
 import useDashboardData from 'src/composables/useDashboardData'
 import RentalService from 'src/services/rental.service'
 import MetricCard from 'src/components/report/MetricCard.vue'
@@ -96,19 +96,7 @@ const { dashboardData: dashboardMetrics, loading: loadingMetrics, loadDashboardD
 const recentRentals = ref([])
 const loadingRentals = ref(false)
 
-const userName = computed(() => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    try {
-      const decodedToken = jwtDecode(token);
-      return decodedToken.username || 'Usuario';
-    } catch (error) {
-      console.error('Error al decodificar el token en HomePage:', error);
-      return 'Usuario';
-    }
-  }
-  return 'Usuario';
-})
+
 const formattedDate = computed(() => date.formatDate(Date.now(), 'dddd, D [de] MMMM [de] YYYY'))
 
 const activeRentalsCount = computed(() => {
@@ -134,7 +122,7 @@ const quickActions = ref([
   {
     label: 'Ver Dashboard',
     icon: 'sym_o_analytics',
-    to: '/reports',
+    to: '/reports/dashboard',
   },
 ])
 
