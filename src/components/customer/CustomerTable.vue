@@ -137,7 +137,7 @@ export default {
           align: 'left',
           field: 'createdAt',
           sortable: true,
-          format: (val) => date.formatDate(val, 'YYYY-MM-DD HH:mm'),
+          format: (val) => date.formatDate(val, 'DD/MM/YYYY'),
         },
         { name: 'actions', label: 'Acciones', field: 'actions', align: 'center', sortable: false },
       ],
