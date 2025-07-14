@@ -1,5 +1,4 @@
 <template>
-  <!-- El contenedor principal ahora es la q-card, no q-page, para que sea más reutilizable -->
   <q-card flat class="q-pa-md">
     <q-card-section>
       <div class="row items-center q-gutter-md">
@@ -14,39 +13,43 @@
       <q-table :rows="customers" :columns="columns" row-key="id" :loading="loading" flat>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <!-- CAMBIO: Ahora llama al método local que emite un evento -->
-            <q-btn
-              icon="sym_o_edit"
-              color="primary"
-              flat
-              round
-              dense
-              @click="emitEditEvent(props.row)"
-            >
-              <q-tooltip>Editar Cliente</q-tooltip>
-            </q-btn>
-            <q-btn
-              v-if="isAdmin"
-              icon="sym_o_delete"
-              color="negative"
-              flat
-              round
-              dense
-              @click="confirmDelete(props.row)"
-            >
-              <q-tooltip>Eliminar Cliente</q-tooltip>
-            </q-btn>
-            <!-- CAMBIO: Ahora llama al método local que emite un evento -->
-            <q-btn
-              icon="sym_o_info"
-              color="info"
-              flat
-              round
-              dense
-              @click="emitDetailsEvent(props.row)"
-            >
-              <q-tooltip>Ver Detalles</q-tooltip>
-            </q-btn>
+            <q-btn-dropdown flat round dense dropdown-icon="sym_o_more_vert" no-icon-animation>
+              <q-list dense>
+                <q-item clickable v-close-popup @click="emitDetailsEvent(props.row)">
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_info" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Ver Detalles</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item clickable v-close-popup @click="emitEditEvent(props.row)">
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_edit" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Editar</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator v-if="isAdmin" />
+
+                <q-item
+                  v-if="isAdmin"
+                  clickable
+                  v-close-popup
+                  @click="confirmDelete(props.row)"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_delete" color="negative" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Eliminar (Admin)</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
           </q-td>
         </template>
 
@@ -63,7 +66,6 @@
     </q-card-section>
   </q-card>
 
-  <!-- La lógica del diálogo de borrado se mantiene igual, ya que es autocontenida y funciona bien -->
   <q-dialog v-model="showDialog" persistent>
     <q-card>
       <q-card-section class="row items-center">
@@ -95,8 +97,6 @@ import { useQuasar, date } from 'quasar'
 
 export default {
   name: 'CustomerTable',
-  // AÑADIDO: Definimos los eventos que este componente puede emitir.
-  // Esto es una buena práctica para que otros desarrolladores sepan cómo usarlo.
   emits: ['edit-customer', 'view-details'],
   setup() {
     const $q = useQuasar()
@@ -139,7 +139,7 @@ export default {
           sortable: true,
           format: (val) => date.formatDate(val, 'YYYY-MM-DD HH:mm'),
         },
-        { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' },
+        { name: 'actions', label: 'Acciones', field: 'actions', align: 'center', sortable: false },
       ],
       loading: false,
       showDialog: false,
@@ -161,7 +161,6 @@ export default {
       }
       try {
         const decodedToken = jwtDecode(token)
-        // CORRECCIÓN: Usar 'decodedToken.role' (singular) y comparar con 'ADMIN'
         const userRole = decodedToken.role || ''
         return userRole === 'ADMIN'
       } catch (error) {
@@ -174,7 +173,6 @@ export default {
     await this.loadCustomers()
   },
   methods: {
-    // AÑADIDO: Un método público que el padre puede llamar para refrescar la tabla.
     async refresh() {
       await this.loadCustomers()
     },
@@ -190,19 +188,12 @@ export default {
         this.loading = false
       }
     },
-    // ELIMINADOS: Los métodos goToCreate, goToEdit, goToDetails ya no son necesarios aquí.
-
-    // AÑADIDO: Nuevo método para emitir el evento de edición.
-    // Pasamos el objeto completo del cliente, es más útil para el padre.
     emitEditEvent(customer) {
       this.$emit('edit-customer', customer)
     },
-
-    // AÑADIDO: Nuevo método para emitir el evento de ver detalles.
     emitDetailsEvent(customer) {
       this.$emit('view-details', customer)
     },
-
     confirmDelete(customer) {
       this.customerToDelete = customer
       this.showDialog = true
@@ -212,7 +203,7 @@ export default {
       try {
         await CustomerService.deleteCustomer(this.customerToDelete.id)
         this.$q.notify({ type: 'positive', message: 'Cliente eliminado correctamente' })
-        await this.loadCustomers() // Recarga la tabla después de eliminar
+        await this.loadCustomers()
       } catch (error) {
         console.error('Error al eliminar el cliente:', error)
         const errorMessage = error.response?.data?.message || 'Error al eliminar el cliente.'
