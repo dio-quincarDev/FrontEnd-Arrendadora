@@ -33,8 +33,20 @@ export default {
       responseCache.set(cacheKey, { timestamp: Date.now(), data: responseData })
       return responseData
     } catch (error) {
-      console.error('[Dashboard Error]', { error: error.message, params })
-      throw new Error('Error al cargar datos del dashboard')
+      console.error('[Dashboard Service Error]', { 
+        message: error.message, 
+        status: error.response?.status,
+        params 
+      });
+
+      if (error.response) {
+        const status = error.response.status;
+        const message = `Error ${status} en el servidor. No se pudieron obtener los datos del dashboard.`
+        throw new Error(message);
+      }
+
+      // Para errores de red u otros problemas
+      throw new Error('Error de red al cargar datos del dashboard.');
     }
   },
 

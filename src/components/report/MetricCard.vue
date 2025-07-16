@@ -1,6 +1,6 @@
 <template>
   <q-card class="metric-card" :class="`bg-${color}`">
-    <q-card-section class="q-pa-md text-white">
+    <q-card-section class="q-pa-md" :class="color ? 'text-white' : 'text-dark'">
       <div class="row items-center no-wrap q-mb-sm">
         <q-icon :name="icon || 'insights'" size="md" class="q-mr-sm" />
         <div class="text-subtitle2">{{ title }}</div>
@@ -75,8 +75,8 @@ const formattedValue = computed(() => {
   transition: transform 0.2s ease-in-out;
   display: flex;
   flex-direction: column;
-  justify-content: center; /* Centrar contenido verticalmente si es menor que la altura */
-  height: 130px; /* ¡Altura FIJA para todas las tarjetas! Ajusta este valor si es necesario */
+  justify-content: center;
+  height: 130px;
 
   &:hover {
     transform: scale(1.03);
@@ -85,23 +85,24 @@ const formattedValue = computed(() => {
     flex-grow: 1;
     display: flex;
     flex-direction: column;
-    justify-content: center; /* Centrar el contenido dentro de la sección */
-    padding: 12px 16px; /* Reducir un poco el padding si es necesario */
+    justify-content: center;
+    padding: 12px 16px;
   }
   .text-h5 {
     display: flex;
     align-items: center;
     min-height: 28px;
     line-height: 1.2;
-    margin-bottom: 0px !important; /* Eliminar margen inferior para optimizar espacio */
+    margin-bottom: 0px !important;
   }
   .text-subtitle2 {
     line-height: 1.2;
-    margin-bottom: 4px; /* Pequeño margen para el título */
+    margin-bottom: 4px;
   }
   .text-caption {
     line-height: 1.2;
-    margin-top: 2px; /* Pequeño margen para el caption */
+    margin-top: 2px;
   }
 }
 </style>
+

@@ -1,150 +1,143 @@
 <template>
   <q-page padding>
     <div class="row q-col-gutter-lg">
+      <!-- Filtros -->
       <div class="col-12">
         <metric-filter @update-filters="handleUpdateFilters" :loading="loading" />
       </div>
 
+      <!-- Título de Métricas -->
       <div class="col-12 q-mt-md">
+        <div class="text-h5 text-primary q-mb-sm">Métricas Clave</div>
+      </div>
+
+      <!-- Métricas Clave -->
+      <div class="col-12">
         <div class="row q-col-gutter-lg">
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
             <metric-card
               title="Total de Alquileres"
               icon="sym_o_receipt_long"
-              color="accent"
               :value="dashboardData.totalRentals"
               :loading="loading"
             />
           </div>
-
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
             <metric-card
               title="Ingresos Totales"
               icon="sym_o_payments"
-              color="positive"
               :value="dashboardData.totalRevenue"
               :isCurrency="true"
               :loading="loading"
             />
           </div>
-
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
             <metric-card
               title="Vehículos Disponibles"
               icon="sym_o_local_parking"
-              color="info"
               :value="dashboardData.availableVehicles"
               :loading="loading"
             />
           </div>
-
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
             <metric-card
               title="Clientes Activos"
               icon="sym_o_group"
-              color="primary"
               :value="dashboardData.activeCustomers"
               :loading="loading"
             />
           </div>
-
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
             <metric-card
               title="Nuevos Clientes"
               icon="sym_o_person_add"
-              color="accent"
               :value="dashboardData.newCustomers"
               :loading="loading"
             />
           </div>
-
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
             <metric-card
               title="Clientes Únicos"
               icon="sym_o_diversity_3"
-              color="secondary"
               :value="dashboardData.uniqueCustomers"
               :loading="loading"
             />
           </div>
-
-          <div class="col-12 col-md-3">
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
             <metric-card
               title="Duración Promedio Alquiler (días)"
               icon="sym_o_hourglass_top"
-              color="info"
               :value="dashboardData.averageRentalDuration"
               :loading="loading"
             />
           </div>
-
-          <div class="col-12 col-md-3">
-            <metric-card
-              title="Vehículo Más Alquilado"
-              icon="sym_o_directions_car"
-              color="negative"
-              :loading="loading"
-            >
+          <div class="col-12 col-sm-6 col-md-4 col-lg-3">
+            <metric-card title="Vehículo Más Alquilado" icon="sym_o_directions_car" :loading="loading">
               <template v-if="!loading">
                 <div v-if="dashboardData.mostRentedVehicle?.brand">
-                  <div class="text-h5 text-white q-mb-xs">
+                  <div class="text-h5 q-mb-xs">
                     {{ dashboardData.mostRentedVehicle.brand }}
                     {{ dashboardData.mostRentedVehicle.model }}
                   </div>
-                  <div class="text-caption text-white-7">
+                  <div class="text-caption">
                     Alquileres: {{ dashboardData.mostRentedVehicle.rentalCount }}
                   </div>
                 </div>
-                <div v-else class="text-h5 text-white-7 q-mb-xs">No disponible</div>
+                <div v-else class="text-h5">0</div>
               </template>
             </metric-card>
           </div>
         </div>
       </div>
 
+      <!-- Título de Análisis Visual -->
       <div class="col-12 q-mt-xl">
+        <div class="text-h5 text-primary q-mb-sm">Análisis Visual</div>
+      </div>
+
+      <!-- Gráficos -->
+      <div class="col-12">
         <div class="row q-col-gutter-lg">
-          <div class="col-12 col-md-6">
-            <dynamic-chart-card
-              title="Top Clientes por Alquileres"
-              chartType="bar"
-              :chartData="formatTopCustomersChartData(dashboardData.topCustomersByRentals)"
-              :loading="loading"
-              noDataIcon="person"
-            />
-          </div>
-
-          <div class="col-12 col-md-6">
-            <dynamic-chart-card
-              title="Uso de Vehículos"
-              chartType="pie"
-              :chartData="formatVehicleUsageChartData(dashboardData.vehicleUsage)"
-              :loading="loading"
-              noDataIcon="car_rental"
-            />
-          </div>
-
-          <div class="col-12 col-md-6">
-            <dynamic-chart-card
-              title="Actividad de Clientes (Alquileres vs. Ingresos)"
-              chartType="scatter"
-              :chartData="formatCustomerActivityChartData(dashboardData.customerActivity)"
-              :loading="loading"
-              noDataIcon="groups"
-            />
-          </div>
-
-          <div class="col-12 col-md-6">
+          <!-- Gráfico Principal Ancho -->
+          <div class="col-12">
             <dynamic-chart-card
               title="Tendencias de Alquiler"
               chartType="line"
               :chartData="formatRentalTrendsChartData(dashboardData.rentalTrends)"
               :loading="loading"
-              noDataIcon="trending_up"
+              noDataIcon="sym_o_trending_up"
             />
           </div>
 
-          <div class="col-12 col-md-6">
+          <!-- Gráficos Secundarios -->
+          <div class="col-12 col-lg-6">
+            <dynamic-chart-card
+              title="Top Clientes por Alquileres"
+              chartType="bar"
+              :chartData="formatTopCustomersChartData(dashboardData.topCustomersByRentals)"
+              :loading="loading"
+              noDataIcon="sym_o_person"
+            />
+          </div>
+          <div class="col-12 col-lg-6">
+            <dynamic-chart-card
+              title="Uso de Vehículos"
+              chartType="pie"
+              :chartData="formatVehicleUsageChartData(dashboardData.vehicleUsage)"
+              :loading="loading"
+              noDataIcon="sym_o_car_rental"
+            />
+          </div>
+          <div class="col-12 col-lg-6">
+            <dynamic-chart-card
+              title="Actividad de Clientes (Alquileres vs. Ingresos)"
+              chartType="scatter"
+              :chartData="formatCustomerActivityChartData(dashboardData.customerActivity)"
+              :loading="loading"
+              noDataIcon="sym_o_groups"
+            />
+          </div>
+          <div class="col-12 col-lg-6">
             <dynamic-chart-card
               title="Duración Promedio por Cliente"
               chartType="bar"
@@ -154,12 +147,13 @@
                 )
               "
               :loading="loading"
-              noDataIcon="hourglass_empty"
+              noDataIcon="sym_o_hourglass_empty"
             />
           </div>
         </div>
       </div>
 
+      <!-- Botón de Descarga -->
       <div class="col-12 q-mt-lg text-center">
         <q-btn
           label="Descargar Reporte"
@@ -177,16 +171,13 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import useDashboardData from 'src/composables/useDashboardData'
-import MetricCard from 'src/components/report/MetricCard.vue' // Asegúrate de que esta ruta sea correcta
+import MetricCard from 'src/components/report/MetricCard.vue'
 import DynamicChartCard from 'src/components/report/DynamicChartCard.vue'
 import MetricFilter from 'src/components/report/MetricFilter.vue'
 
-// Extrae las propiedades reactivas del composable
 const { dashboardData, loading, downloading, loadDashboardData, downloadReport } =
   useDashboardData()
 
-// Define un ref para los filtros actuales que se pasarán a loadDashboardData
-// Incluye 'reportType' con un valor por defecto para la descarga de reportes
 const currentFilters = ref({
   period: 'ALL_TIME',
   startDate: null,
@@ -194,7 +185,7 @@ const currentFilters = ref({
   reportType: 'RENTAL_SUMMARY',
 })
 
-// Funciones de normalización para los gráficos
+// --- Funciones de Normalización de Datos para Gráficos ---
 const formatTopCustomersChartData = (data) => {
   if (!Array.isArray(data) || data.length === 0) return { labels: [], datasets: [] }
   return {
@@ -247,29 +238,27 @@ const formatAverageRentalDurationChartData = (data) => {
   }
 }
 
-// Manejador del evento 'update-filters' emitido por MetricFilter
+// --- Manejadores de Eventos ---
 const handleUpdateFilters = (filters) => {
-  // Cuando se actualizan los filtros, también actualiza el reportType
-  currentFilters.value = { ...filters, reportType: filters.reportType || 'RENTAL_SUMMARY' }
+  currentFilters.value = filters
   loadDashboardData(currentFilters.value)
 }
 
-// Manejador para la descarga de reportes
 const handleDownloadReport = () => {
   downloadReport({
-    format: 'PDF', // El formato es fijo a PDF por ahora, según lo que tu backend soporta
-    reportType: currentFilters.value.reportType, // Usa el tipo de reporte seleccionado en el filtro
-    ...currentFilters.value, // Pasa también las fechas y el periodo
+    format: 'PDF',
+    ...currentFilters.value,
   })
 }
 
-// Carga los datos del dashboard cuando el componente se monta inicialmente
+// --- Ciclo de Vida ---
 onMounted(() => {
   loadDashboardData(currentFilters.value)
 })
 </script>
 
 <style lang="scss" scoped>
-// No hay estilos específicos aquí, ya que la mayoría se manejan en los componentes individuales.
-// Puedes agregar estilos globales si los necesitas para el padding de la página, etc.
+.text-primary {
+  color: $accent !important;
+}
 </style>

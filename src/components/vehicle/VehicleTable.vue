@@ -20,37 +20,43 @@
         </template>
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
-            <q-btn
-              icon="sym_o_edit"
-              color="primary"
-              flat
-              round
-              dense
-              @click="emitEditEvent(props.row)"
-            >
-              <q-tooltip>Editar Vehículo</q-tooltip>
-            </q-btn>
-            <q-btn
-              v-if="isAdmin"
-              icon="sym_o_delete"
-              color="negative"
-              flat
-              round
-              dense
-              @click="confirmDelete(props.row)"
-            >
-              <q-tooltip>Eliminar Vehículo</q-tooltip>
-            </q-btn>
-            <q-btn
-              icon="sym_o_info"
-              color="info"
-              flat
-              round
-              dense
-              @click="emitDetailsEvent(props.row)"
-            >
-              <q-tooltip>Ver Detalles</q-tooltip>
-            </q-btn>
+            <q-btn-dropdown flat round dense dropdown-icon="sym_o_more_vert" no-icon-animation>
+              <q-list dense>
+                <q-item clickable v-close-popup @click="emitDetailsEvent(props.row)">
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_info" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Ver Detalles</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item clickable v-close-popup @click="emitEditEvent(props.row)">
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_edit" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Editar</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator v-if="isAdmin" />
+
+                <q-item
+                  v-if="isAdmin"
+                  clickable
+                  v-close-popup
+                  @click="confirmDelete(props.row)"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_delete" color="negative" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Eliminar (Admin)</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
           </q-td>
         </template>
 
@@ -119,7 +125,7 @@ export default {
           format: (val) => this.getStatusDescription(val),
           sortable: true,
         },
-        { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' },
+        { name: 'actions', label: 'Acciones', field: 'actions', align: 'center', sortable: false },
       ],
       loading: false,
       showDialog: false,

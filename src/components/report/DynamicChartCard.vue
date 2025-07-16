@@ -22,6 +22,9 @@
 
 <script setup>
 import { computed } from 'vue'
+import { useQuasar } from 'quasar'
+
+const $q = useQuasar()
 
 // Props
 const props = defineProps({
@@ -34,7 +37,6 @@ const props = defineProps({
 
 // Computed para determinar si hay data
 const hasData = computed(() => {
-  // Verifica si chartData existe, si tiene datasets y si al menos un dataset tiene datos.
   return (
     props.chartData &&
     Array.isArray(props.chartData.datasets) &&
@@ -45,39 +47,39 @@ const hasData = computed(() => {
 
 // Paleta de colores para gráficos
 const CHART_COLORS = [
-  '#5470C6',
-  '#91CC75',
-  '#EE6666',
-  '#FC8452',
-  '#9A60B4',
-  '#EA7CCC', // Colores primarios y cálidos
-  '#73C0DE',
-  '#3BA272',
-  '#FCBF49',
-  '#F79256',
-  '#D4ADFF',
-  '#F9E7D2', // Tonos secundarios y pasteles
+  '#42A5F5', // Azul claro
+  '#66BB6A', // Verde
+  '#FFA726', // Naranja
+  '#EF5350', // Rojo
+  '#AB47BC', // Púrpura
+  '#78909C', // Gris azulado
+  '#26A69A', // Teal
+  '#FFCA28', // Ámbar
+  '#5C6BC0', // Índigo
+  '#EC407A', // Rosa
+  '#7E57C2', // Violeta
+  '#BDBDBD', // Gris
 ]
 
 // Computed para opciones de ECharts
 const chartOptions = computed(() => {
+  const isMobile = $q.screen.lt.sm
+
   const commonOptions = {
     animation: true,
-    animationDuration: 1200, // Animación un poco más larga para suavidad
+    animationDuration: 1200,
     textStyle: {
       fontFamily: 'Roboto, sans-serif',
       fontSize: 12,
-      color: '#333', // Color general de texto para legibilidad
+      color: '#333',
     },
-    // Ajuste de margen para todos los gráficos
     grid: {
-      left: '3%',
-      right: '4%',
-      bottom: '3%',
-      containLabel: true, // Asegura que las etiquetas de los ejes no se corten
+      left: isMobile ? '5%' : '3%',
+      right: isMobile ? '5%' : '4%',
+      bottom: isMobile ? '10%' : '3%',
+      containLabel: true,
     },
     tooltip: {
-      // Estilo de tooltip global
       backgroundColor: 'rgba(50,50,50,0.8)',
       borderColor: '#333',
       borderWidth: 1,
@@ -86,7 +88,7 @@ const chartOptions = computed(() => {
         fontSize: 12,
       },
       axisPointer: {
-        type: 'shadow', // Por defecto para barras/líneas
+        type: 'shadow',
       },
     },
   }
@@ -95,27 +97,27 @@ const chartOptions = computed(() => {
     return {
       ...commonOptions,
       tooltip: {
-        ...commonOptions.tooltip, // Hereda el estilo base del tooltip
+        ...commonOptions.tooltip,
         trigger: 'item',
-        formatter: '{a} <br/>{b}: {c} ({d}%)', // Nombre de serie, nombre de dato, valor, porcentaje
+        formatter: '{a} <br/>{b}: {c} ({d}%)',
       },
       legend: {
+        show: !isMobile, // Ocultar leyenda en móvil para más espacio
         orient: 'vertical',
         left: 'auto',
-        right: '5%', // Mover la leyenda a la derecha para un gráfico más centrado
-        top: 'center', // Centrar verticalmente
-        padding: [20, 0, 20, 0], // Espaciado
+        right: '5%',
+        top: 'center',
         textStyle: {
-          fontSize: 12, // Tamaño de fuente para la leyenda
+          fontSize: 12,
           color: '#555',
         },
-        itemGap: 10, // Espacio entre elementos de la leyenda
+        itemGap: 10,
       },
       series: props.chartData.datasets.map((ds) => ({
         name: ds.label,
         type: 'pie',
-        radius: ['40%', '70%'], // Anillo para un diseño más moderno
-        center: ['40%', '50%'], // Ajuste del centro para hacer espacio a la leyenda
+        radius: ['40%', '70%'],
+        center: isMobile ? ['50%', '50%'] : ['40%', '50%'], // Centrar en móvil
         data: props.chartData.labels.map((label, i) => ({
           name: label,
           value: ds.data[i],
@@ -124,22 +126,19 @@ const chartOptions = computed(() => {
           itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' },
         },
         label: {
-          show: true,
-          position: 'outside', // Etiquetas fuera del anillo
-          formatter: '{b}: {d}%', // Muestra nombre del dato y porcentaje
-          fontSize: 11, // Tamaño de fuente para etiquetas del pastel
+          show: !isMobile, // Ocultar etiquetas en móvil
+          position: 'outside',
+          formatter: '{b}: {d}%',
+          fontSize: 11,
           color: '#333',
-          lineHeight: 16, // Altura de línea para evitar superposición
+          lineHeight: 16,
         },
         labelLine: {
-          show: true,
-          length: 10, // Largo de la primera parte de la línea
-          length2: 15, // Largo de la segunda parte de la línea
-          smooth: true, // Líneas suaves
+          show: !isMobile,
         },
         itemStyle: {
-          color: (params) => CHART_COLORS[params.dataIndex % CHART_COLORS.length], // Usa la paleta de colores
-          borderColor: '#fff', // Borde blanco entre segmentos
+          color: (params) => CHART_COLORS[params.dataIndex % CHART_COLORS.length],
+          borderColor: '#fff',
           borderWidth: 1,
         },
       })),
@@ -149,12 +148,15 @@ const chartOptions = computed(() => {
   if (props.chartType === 'scatter') {
     return {
       ...commonOptions,
+      grid: {
+        ...commonOptions.grid,
+        left: '10%', // Más espacio para etiquetas del eje Y
+      },
       tooltip: {
         ...commonOptions.tooltip,
         trigger: 'item',
         formatter: (params) => {
           if (params.data && Array.isArray(params.data)) {
-            // Asume que data[0] es alquileres y data[1] es ingresos, y params.name es el nombre del cliente
             return `**${params.name}**<br/>Alquileres: ${params.data[0]}<br/>Ingresos: $${params.data[1]}`
           }
           return params.name || ''
@@ -162,47 +164,39 @@ const chartOptions = computed(() => {
       },
       xAxis: {
         type: 'value',
-        name: 'Cantidad de Alquileres',
+        name: isMobile ? 'Alquileres' : 'Cantidad de Alquileres',
         nameLocation: 'middle',
         nameGap: 30,
-        axisLabel: {
-          formatter: '{value}',
-          fontSize: 11,
-          color: '#666',
-        },
+        axisLabel: { fontSize: 10, color: '#666' },
         axisLine: { lineStyle: { color: '#ccc' } },
         splitLine: { show: true, lineStyle: { type: 'dashed', color: '#eee' } },
       },
       yAxis: {
         type: 'value',
-        name: 'Ingresos Generados',
+        name: isMobile ? 'Ingresos' : 'Ingresos Generados',
         nameLocation: 'middle',
-        nameGap: 40,
-        axisLabel: {
-          formatter: '$ {value}',
-          fontSize: 11,
-          color: '#666',
-        },
+        nameGap: isMobile ? 35 : 50,
+        axisLabel: { formatter: '$ {value}', fontSize: 10, color: '#666' },
         axisLine: { lineStyle: { color: '#ccc' } },
         splitLine: { show: true, lineStyle: { type: 'dashed', color: '#eee' } },
       },
       series: props.chartData.datasets.map((ds) => ({
-        name: ds.label, // Por ejemplo, 'Actividad de Cliente'
+        name: ds.label,
         type: 'scatter',
         data: ds.data,
-        symbolSize: 12, // Tamaño de los puntos
+        symbolSize: isMobile ? 8 : 12,
         emphasis: {
           focus: 'series',
           itemStyle: {
-            borderColor: '#5470C6', // Borde de resaltado
+            borderColor: '#5470C6',
             borderWidth: 2,
           },
         },
         itemStyle: {
-          color: CHART_COLORS[2], // Color distintivo para los puntos (ej: un rojo suave)
+          color: CHART_COLORS[2],
         },
         label: {
-          show: true, // Muestra el nombre del cliente junto al punto
+          show: !isMobile, // Ocultar etiquetas de puntos en móvil
           formatter: (params) => params.name,
           position: 'right',
           fontSize: 10,
@@ -212,86 +206,78 @@ const chartOptions = computed(() => {
     }
   }
 
-  // Por defecto: bar y line charts
-  // Determinamos si es un gráfico de barras horizontal para nombres largos
   const isHorizontalBar =
     props.chartType === 'bar' &&
+    !isMobile &&
     props.chartData.labels &&
-    props.chartData.labels.some((label) => label.length > 15) // Si alguna etiqueta es muy larga
+    props.chartData.labels.some((label) => label.length > 15)
 
   return {
     ...commonOptions,
-    tooltip: { ...commonOptions.tooltip, trigger: 'axis' }, // Tooltip de eje para bar/line
+    tooltip: { ...commonOptions.tooltip, trigger: 'axis' },
     legend: {
-      show: props.chartData.datasets.length > 1,
+      show: !isMobile && props.chartData.datasets.length > 1,
       bottom: 0,
       textStyle: { fontSize: 12, color: '#555' },
     },
     xAxis: {
       type: isHorizontalBar ? 'value' : 'category',
-      data: isHorizontalBar ? undefined : props.chartData.labels, // Data en Y para horizontal
+      data: isHorizontalBar ? undefined : props.chartData.labels,
       axisLabel: {
-        rotate: isHorizontalBar
-          ? 0
-          : props.chartData.labels && props.chartData.labels.length > 5
-            ? 30
-            : 0,
-        interval: 0, // Asegura que todas las etiquetas se muestren
-        fontSize: 11,
+        rotate: isMobile ? 45 : isHorizontalBar ? 0 : 30,
+        interval: 0,
+        fontSize: 10,
         color: '#666',
       },
-      name: isHorizontalBar ? props.chartData.datasets[0]?.label || '' : '', // Nombre del eje X (si es horizontal, la etiqueta de la serie)
+      name: isHorizontalBar ? props.chartData.datasets[0]?.label || '' : '',
       nameLocation: 'middle',
       nameGap: 30,
       axisLine: { lineStyle: { color: '#ccc' } },
     },
     yAxis: {
       type: isHorizontalBar ? 'category' : 'value',
-      data: isHorizontalBar ? props.chartData.labels : undefined, // Data en X para vertical
+      data: isHorizontalBar ? props.chartData.labels : undefined,
       axisLabel: {
         formatter: (value) => {
-          // Formateo para números grandes (K para miles, M para millones)
+          if (isMobile) return value >= 1000 ? `${(value / 1000).toFixed(0)}k` : value
           if (value >= 1000000) return `${(value / 1000000).toFixed(1)}M`
           if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
           return value
         },
-        fontSize: 11,
+        fontSize: 10,
         color: '#666',
       },
-      name: isHorizontalBar ? '' : props.chartData.datasets[0]?.label || '', // Nombre del eje Y (si es vertical, la etiqueta de la serie)
+      name: isHorizontalBar ? '' : props.chartData.datasets[0]?.label || '',
       nameLocation: 'middle',
-      nameGap: 35,
+      nameGap: isHorizontalBar ? 80 : 40, // Más espacio para etiquetas largas en horizontal
       axisLine: { lineStyle: { color: '#ccc' } },
     },
     series: props.chartData.datasets.map((ds, index) => ({
       name: ds.label,
       type: props.chartType,
       data: ds.data,
-      smooth: props.chartType === 'line', // Curvas suaves para líneas
+      smooth: props.chartType === 'line',
       itemStyle: {
-        color: CHART_COLORS[index % CHART_COLORS.length], // Usa la paleta de colores, rotando
+        color: CHART_COLORS[index % CHART_COLORS.length],
       },
-      barWidth: '60%', // Ancho de las barras
+      barWidth: '60%',
       label: {
-        // Etiquetas directas en las barras
-        show: props.chartType === 'bar', // Mostrar solo en barras
-        position: isHorizontalBar ? 'right' : 'top', // Posición de la etiqueta
-        valueAnimation: true, // Animación al cambiar el valor
+        show: !isMobile && props.chartType === 'bar',
+        position: isHorizontalBar ? 'right' : 'top',
+        valueAnimation: true,
         fontSize: 10,
         color: '#333',
       },
-      // Configuración de línea específica si es type 'line'
       lineStyle:
         props.chartType === 'line'
           ? {
-              width: 3, // Grosor de la línea
+              width: 3,
               type: 'solid',
             }
           : undefined,
-      // Marcadores en la línea para gráficos de línea
       symbol: props.chartType === 'line' ? 'circle' : 'none',
       symbolSize: props.chartType === 'line' ? 8 : 0,
-      showSymbol: props.chartType === 'line', // Mostrar marcadores por defecto
+      showSymbol: props.chartType === 'line',
     })),
   }
 })
@@ -300,9 +286,9 @@ const chartOptions = computed(() => {
 <style scoped>
 .dynamic-chart-card {
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); /* Sombra más pronunciada */
-  background: linear-gradient(145deg, #ffffff, #f0f0f0); /* Degradado suave */
-  color: #333; /* Color de texto base */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  background: linear-gradient(145deg, #ffffff, #f0f0f0);
+  color: #333;
 }
 .chart-container {
   width: 100%;
