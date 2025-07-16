@@ -45,51 +45,64 @@
         </template>
 
         <template #body-cell-actions="props">
-          <q-td :props="props" class="action-buttons">
-            <q-btn
-              icon="sym_o_info"
-              color="info"
-              flat
-              round
-              dense
-              @click="emitDetailsEvent(props.row)"
-            >
-              <q-tooltip>Ver Detalles</q-tooltip>
-            </q-btn>
-            <q-btn
-              icon="sym_o_edit"
-              color="primary"
-              flat
-              round
-              dense
-              @click="emitEditEvent(props.row)"
-              :disable="props.row.rentalStatus === 'CANCELLED'"
-            >
-              <q-tooltip>Editar Renta</q-tooltip>
-            </q-btn>
-            <q-btn
-              icon="sym_o_cancel"
-              color="orange"
-              flat
-              round
-              dense
-              @click="confirmCancel(props.row)"
-              :disable="props.row.rentalStatus !== 'RENTED'"
-            >
-              <q-tooltip>Cancelar Renta</q-tooltip>
-            </q-btn>
-            <q-btn
-              v-if="isAdmin"
-              icon="sym_o_delete"
-              color="negative"
-              flat
-              round
-              dense
-              @click="confirmDelete(props.row)"
-              :disable="props.row.rentalStatus === 'RENTED'"
-            >
-              <q-tooltip>Eliminar Renta</q-tooltip>
-            </q-btn>
+          <q-td :props="props">
+            <q-btn-dropdown flat round dense dropdown-icon="sym_o_more_vert" no-icon-animation>
+              <q-list dense>
+                <q-item clickable v-close-popup @click="emitDetailsEvent(props.row)">
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_info" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Ver Detalles</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="emitEditEvent(props.row)"
+                  :disable="props.row.rentalStatus === 'CANCELLED'"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_edit" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Editar</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-item
+                  clickable
+                  v-close-popup
+                  @click="confirmCancel(props.row)"
+                  :disable="props.row.rentalStatus !== 'ACTIVE'"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_cancel" color="orange" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Cancelar Renta</q-item-label>
+                  </q-item-section>
+                </q-item>
+
+                <q-separator v-if="isAdmin" />
+
+                <q-item
+                  v-if="isAdmin"
+                  clickable
+                  v-close-popup
+                  @click="confirmDelete(props.row)"
+                  :disable="props.row.rentalStatus === 'ACTIVE'"
+                >
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_delete" color="negative" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Eliminar (Admin)</q-item-label>
+                  </q-item-section>
+                </q-item>
+              </q-list>
+            </q-btn-dropdown>
           </q-td>
         </template>
       </q-table>
@@ -161,8 +174,13 @@ const deleteRentalId = ref(null)
 
 const columns = [
   { name: 'customerName', label: 'Cliente', field: 'customerName', align: 'left', sortable: true },
-  { name: 'vehicleBrand', label: 'Marca', field: 'vehicleBrand', align: 'left', sortable: true },
-  { name: 'vehicleModel', label: 'Modelo', field: 'vehicleModel', align: 'left', sortable: true },
+  {
+    name: 'vehicle',
+    label: 'Vehículo',
+    field: (row) => `${row.vehicleBrand} ${row.vehicleModel}`,
+    align: 'left',
+    sortable: true,
+  },
   { name: 'startDate', label: 'Fecha Inicio', field: 'startDate', align: 'left', sortable: true },
   { name: 'endDate', label: 'Fecha Fin', field: 'endDate', align: 'left', sortable: true },
   {
@@ -173,7 +191,7 @@ const columns = [
     sortable: true,
   },
   { name: 'rentalStatus', label: 'Estado', field: 'rentalStatus', align: 'center', sortable: true },
-  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center' },
+  { name: 'actions', label: 'Acciones', field: 'actions', align: 'center', sortable: false },
 ]
 
 const pagination = ref({

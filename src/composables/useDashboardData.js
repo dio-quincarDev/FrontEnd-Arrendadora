@@ -8,7 +8,7 @@ export default function useDashboardData() {
   const loading = ref(false)
   const downloading = ref(false)
 
-  const dashboardData = ref({
+  const initialData = {
     totalRentals: 0,
     totalRevenue: 0,
     availableVehicles: 0,
@@ -19,11 +19,12 @@ export default function useDashboardData() {
     customerActivity: [],
     rentalTrends: [],
     mostRentedVehicle: {},
-    // ¡Añade esta propiedad para el gráfico de duración promedio por cliente!
-    averageRentalDurationByTopCustomers: {}, // Inicializa como objeto vacío
-    newCustomers: 0, // También vista en tu JSON de respuesta
-    uniqueCustomers: 0, // También vista en tu JSON de respuesta
-  })
+    averageRentalDurationByTopCustomers: {},
+    newCustomers: 0,
+    uniqueCustomers: 0,
+  };
+
+  const dashboardData = ref({ ...initialData });
 
   const loadDashboardData = async (filters) => {
     loading.value = true
@@ -31,29 +32,20 @@ export default function useDashboardData() {
       const data = await ReportService.getDashboardData(filters)
       if (data && typeof data === 'object') {
         dashboardData.value = {
-          totalRentals: data?.totalRentals ?? 0,
-          totalRevenue: data?.totalRevenue ?? 0,
-          availableVehicles: data?.availableVehicles ?? 0,
-          activeCustomers: data?.activeCustomers ?? 0,
-          averageRentalDuration: data?.averageRentalDuration ?? 0,
-          topCustomersByRentals: data?.topCustomersByRentals ?? [],
-          vehicleUsage: data?.vehicleUsage ?? [],
-          customerActivity: data?.customerActivity ?? [],
-          rentalTrends: data?.rentalTrends ?? [],
-          mostRentedVehicle: data?.mostRentedVehicle ?? {},
-          // ¡Asegúrate de asignar los datos que vienen de la API!
-          averageRentalDurationByTopCustomers: data?.averageRentalDurationByTopCustomers ?? {},
-          newCustomers: data?.newCustomers ?? 0,
-          uniqueCustomers: data?.uniqueCustomers ?? 0,
-        }
-        console.log(
-          'Datos brutos del dashboard cargados:',
-          JSON.parse(JSON.stringify(dashboardData.value)),
-        ) // Para depuración
+          ...initialData, // Asegura que todas las propiedades se resetean
+          ...data, // Sobrescribe con los datos recibidos
+        };
       }
     } catch (error) {
       console.error('[Dashboard] Error al cargar datos', error)
-      $q.notify({ type: 'negative', message: 'Error al cargar dashboard', caption: error.message })
+      $q.notify({ 
+        type: 'negative', 
+        message: 'No se pudieron cargar los datos', 
+        caption: 'El servidor respondió con un error. Inténtalo con otro rango de fechas.',
+        position: 'top'
+      });
+      // Resetea los datos a su estado inicial para que los gráficos muestren "Sin datos"
+      dashboardData.value = { ...initialData };
     } finally {
       loading.value = false
     }
