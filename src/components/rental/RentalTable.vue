@@ -6,18 +6,123 @@
           <h2 class="text-h5 text-dark q-my-none">Gestión de Rentas</h2>
           <p class="text-grey-7 q-mb-none">Aquí puedes administrar todas tus rentas.</p>
         </div>
+        <div class="col-12 col-md-auto">
+          <q-input
+            outlined
+            dense
+            v-model="filter"
+            placeholder="Buscar renta..."
+            clearable
+            class="q-mb-md"
+          >
+            <template v-slot:append>
+              <q-icon name="sym_o_search" />
+            </template>
+          </q-input>
+        </div>
       </div>
     </q-card-section>
 
     <q-card-section class="q-pa-none">
       <q-table
-        :rows="rentals"
+        :rows="filteredRentals"
         :columns="columns"
         row-key="id"
         :loading="loading"
         :pagination="pagination"
         flat
+        :grid="isMobile"
+        :hide-header="isMobile"
       >
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-3 grid-item">
+            <q-card flat bordered>
+              <q-card-section class="text-center">
+                <div class="text-h6">Renta #{{ props.row.id }}</div>
+                <div class="text-subtitle2 text-grey-8">{{ props.row.customerName }}</div>
+              </q-card-section>
+              <q-separator />
+              <q-card-section class="flex flex-center">
+                <q-list dense>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_directions_car" /></q-item-section>
+                    <q-item-section
+                      >Vehículo: {{ props.row.vehicleBrand }}
+                      {{ props.row.vehicleModel }}</q-item-section
+                    >
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_attach_money" /></q-item-section>
+                    <q-item-section>Tarifa: {{ props.row.pricingTier }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_event" /></q-item-section>
+                    <q-item-section>Inicio: {{ formatDate(props.row.startDate) }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_event_busy" /></q-item-section>
+                    <q-item-section>Fin: {{ formatDate(props.row.endDate) }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_payments" /></q-item-section>
+                    <q-item-section
+                      >Total: {{ formatCurrency(props.row.totalPrice) }}</q-item-section
+                    >
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_info" /></q-item-section>
+                    <q-item-section
+                      >Estado:
+                      <q-badge :color="getStatusColor(props.row.rentalStatus)">{{
+                        props.row.rentalStatus
+                      }}</q-badge></q-item-section
+                    >
+                  </q-item>
+                </q-list>
+              </q-card-section>
+              <q-separator />
+              <q-card-actions align="right">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_info"
+                  color="info"
+                  @click="emitDetailsEvent(props.row)"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_edit"
+                  color="primary"
+                  @click="emitEditEvent(props.row)"
+                  :disable="props.row.rentalStatus === 'CANCELLED'"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_cancel"
+                  color="orange"
+                  @click="confirmCancel(props.row)"
+                  :disable="props.row.rentalStatus !== 'ACTIVE'"
+                />
+                <q-btn
+                  v-if="isAdmin"
+                  flat
+                  round
+                  dense
+                  icon="sym_o_delete"
+                  color="negative"
+                  @click="confirmDelete(props.row)"
+                  :disable="props.row.rentalStatus === 'ACTIVE'"
+                />
+              </q-card-actions>
+            </q-card>
+          </div>
+        </template>
+
         <template #body-cell-startDate="props">
           <q-td :props="props">
             {{ formatDate(props.row.startDate) }}
@@ -171,6 +276,7 @@ const showCancelDialog = ref(false)
 const showDeleteDialog = ref(false)
 const cancelRentalId = ref(null)
 const deleteRentalId = ref(null)
+const filter = ref('')
 
 const columns = [
   { name: 'customerName', label: 'Cliente', field: 'customerName', align: 'left', sortable: true },
@@ -207,6 +313,24 @@ const pagination = ref({
   page: 1,
   rowsPerPage: 10,
   rowsNumber: 0,
+})
+
+const isMobile = computed(() => {
+  return $q.screen.lt.md
+})
+
+const filteredRentals = computed(() => {
+  if (!filter.value) {
+    return rentals.value
+  }
+  const lowerCaseFilter = filter.value.toLowerCase()
+  return rentals.value.filter(
+    (rental) =>
+      rental.customerName.toLowerCase().includes(lowerCaseFilter) ||
+      rental.vehicleBrand.toLowerCase().includes(lowerCaseFilter) ||
+      rental.vehicleModel.toLowerCase().includes(lowerCaseFilter) ||
+      rental.pricingTier.toLowerCase().includes(lowerCaseFilter),
+  )
 })
 
 const isAdmin = computed(() => {

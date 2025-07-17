@@ -6,11 +6,96 @@
           <h2 class="text-h5 text-dark q-my-none">Gestión de Vehículos</h2>
           <p class="text-grey-7 q-mb-none">Aquí puedes administrar todos tus vehículos.</p>
         </div>
+        <div class="col-12 col-md-auto">
+          <q-input
+            outlined
+            dense
+            v-model="filter"
+            placeholder="Buscar vehículo..."
+            clearable
+            class="q-mb-md"
+          >
+            <template v-slot:append>
+              <q-icon name="sym_o_search" />
+            </template>
+          </q-input>
+        </div>
       </div>
     </q-card-section>
 
     <q-card-section class="q-pa-none">
-      <q-table :rows="vehicles" :columns="columns" row-key="id" :loading="loading" flat>
+      <q-table
+        :rows="filteredVehicles"
+        :columns="columns"
+        row-key="id"
+        :loading="loading"
+        flat
+        :grid="isMobile"
+        :hide-header="isMobile"
+      >
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-3 grid-item">
+            <q-card flat bordered>
+              <q-card-section class="text-center">
+                <div class="text-h6">{{ props.row.brand }} {{ props.row.model }}</div>
+                <div class="text-subtitle2 text-grey-8">{{ props.row.plate }}</div>
+              </q-card-section>
+              <q-separator />
+              <q-card-section class="flex flex-center">
+                <q-list dense>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_category" /></q-item-section>
+                    <q-item-section
+                      >Tipo: {{ getVehicleTypeDescription(props.row.vehicleType) }}</q-item-section
+                    >
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_calendar_today" /></q-item-section>
+                    <q-item-section>Año: {{ props.row.year }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_info" /></q-item-section>
+                    <q-item-section
+                      >Estado:
+                      <q-badge :color="getBadgeColor(props.row.status)">{{
+                        getStatusDescription(props.row.status)
+                      }}</q-badge></q-item-section
+                    >
+                  </q-item>
+                </q-list>
+              </q-card-section>
+              <q-separator />
+              <q-card-actions align="right">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_info"
+                  color="info"
+                  @click="emitDetailsEvent(props.row)"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_edit"
+                  color="primary"
+                  @click="emitEditEvent(props.row)"
+                />
+                <q-btn
+                  v-if="isAdmin"
+                  flat
+                  round
+                  dense
+                  icon="sym_o_delete"
+                  color="negative"
+                  @click="confirmDelete(props.row)"
+                />
+              </q-card-actions>
+            </q-card>
+          </div>
+        </template>
+
         <template v-slot:body-cell-status="props">
           <q-td :props="props">
             <q-badge :color="getBadgeColor(props.row.status)">
@@ -42,12 +127,7 @@
 
                 <q-separator v-if="isAdmin" />
 
-                <q-item
-                  v-if="isAdmin"
-                  clickable
-                  v-close-popup
-                  @click="confirmDelete(props.row)"
-                >
+                <q-item v-if="isAdmin" clickable v-close-popup @click="confirmDelete(props.row)">
                   <q-item-section avatar>
                     <q-icon name="sym_o_delete" color="negative" />
                   </q-item-section>
@@ -79,8 +159,11 @@
         <q-avatar icon="sym_o_warning" color="warning" text-color="white" class="q-mr-md" />
         <span class="q-ml-sm">
           ¿Estás seguro de que quieres eliminar el vehículo
-          <strong>"{{ vehicleToDelete ? vehicleToDelete.brand + ' ' + vehicleToDelete.model : '' }}"</strong>? Esta acción no se
-          puede deshacer.
+          <strong
+            >"{{
+              vehicleToDelete ? vehicleToDelete.brand + ' ' + vehicleToDelete.model : ''
+            }}"</strong
+          >? Esta acción no se puede deshacer.
         </span>
       </q-card-section>
       <q-card-actions align="right">
@@ -112,6 +195,7 @@ export default {
   data() {
     return {
       vehicles: [],
+      filter: '',
       columns: [
         { name: 'brand', label: 'Marca', field: 'brand', align: 'left', sortable: true },
         { name: 'model', label: 'Modelo', field: 'model', align: 'left', sortable: true },
@@ -141,6 +225,25 @@ export default {
     }
   },
   computed: {
+    isMobile() {
+      return this.$q.screen.lt.md
+    },
+    filteredVehicles() {
+      if (!this.filter) {
+        return this.vehicles
+      }
+      const lowerCaseFilter = this.filter.toLowerCase()
+      return this.vehicles.filter(
+        (vehicle) =>
+          vehicle.brand.toLowerCase().includes(lowerCaseFilter) ||
+          vehicle.model.toLowerCase().includes(lowerCaseFilter) ||
+          vehicle.plate.toLowerCase().includes(lowerCaseFilter) ||
+          this.getVehicleTypeDescription(vehicle.vehicleType)
+            .toLowerCase()
+            .includes(lowerCaseFilter) ||
+          this.getStatusDescription(vehicle.status).toLowerCase().includes(lowerCaseFilter),
+      )
+    },
     isAdmin() {
       const token = localStorage.getItem('authToken')
       if (!token) {

@@ -145,9 +145,11 @@ function logout() {
 
 /* Este es un estilo propuesto para el enlace activo del router, más sutil */
 .q-list .q-router-link--active-subtle.q-router-link--active {
-  /* Para usar una versión con opacidad de un color SCSS, se puede hacer así: */
   background-color: rgba($accent, 0.1);
   color: $accent; /* Usando la variable SCSS */
   font-weight: 500;
+  border-left: 4px solid $accent; /* Borde izquierdo para destacar */
+  border-radius: 0 8px 8px 0; /* Bordes redondeados solo a la derecha */
+  padding-left: 12px; /* Ajustar padding para compensar el borde */
 }
 </style>
