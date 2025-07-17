@@ -24,6 +24,13 @@
 
         <q-item>
           <q-item-section>
+            <q-item-label overline>Tipo de Vehículo</q-item-label>
+            <q-item-label>{{ vehicleTypeDescription }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item>
+          <q-item-section>
             <q-item-label overline>Año</q-item-label>
             <q-item-label>{{ vehicle.year }}</q-item-label>
           </q-item-section>
@@ -73,7 +80,7 @@
 </template>
 
 <script>
-import { computed } from 'vue' // <-- Importa 'computed'
+import { computed } from 'vue'
 import { date } from 'quasar'
 
 export default {
@@ -96,6 +103,16 @@ export default {
       return mapping[status] || status || 'Desconocido'
     }
 
+    const getVehicleTypeDescription = (type) => {
+      const mapping = {
+        PICKUP: 'Doble Cabina',
+        SUV: 'Camioneta',
+        SEDAN: 'Sedan',
+        HATCHBACK: 'Hatchback',
+      }
+      return mapping[type] || type || 'Desconocido'
+    }
+
     const getBadgeColor = (status) => {
       const colors = {
         AVAILABLE: 'green',
@@ -106,7 +123,6 @@ export default {
       return colors[status] || 'primary'
     }
 
-    // Convertido a una propiedad computada
     const formattedCreatedAt = computed(() => {
       if (props.vehicle?.createdAt) {
         return date.formatDate(props.vehicle.createdAt, 'D [de] MMMM [de] YYYY, h:mm A')
@@ -114,8 +130,9 @@ export default {
       return 'N/A'
     })
 
-    const statusDescription = computed(() => getStatusDescription(props.vehicle?.status)) // Convertido a computed para reactividad
-    const badgeColor = computed(() => getBadgeColor(props.vehicle?.status)) // Convertido a computed para reactividad
+    const statusDescription = computed(() => getStatusDescription(props.vehicle?.status))
+    const vehicleTypeDescription = computed(() => getVehicleTypeDescription(props.vehicle?.vehicleType))
+    const badgeColor = computed(() => getBadgeColor(props.vehicle?.status))
 
     const emitEditEvent = () => {
       emit('edit', props.vehicle)
@@ -129,6 +146,7 @@ export default {
       statusDescription,
       badgeColor,
       formattedCreatedAt,
+      vehicleTypeDescription,
       emitEditEvent,
       emitCloseEvent,
     }

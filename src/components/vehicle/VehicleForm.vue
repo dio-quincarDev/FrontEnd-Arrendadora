@@ -53,6 +53,19 @@
         />
 
         <q-select
+          v-model="formData.vehicleType"
+          :options="vehicleTypeOptions"
+          label="Tipo de Vehículo *"
+          outlined
+          dense
+          emit-value
+          map-options
+          class="q-mb-md"
+          lazy-rules
+          :rules="[(val) => !!val || 'Por favor, selecciona un tipo de vehículo']"
+        />
+
+        <q-select
           v-model="formData.status"
           :options="statusOptions"
           label="Estado *"
@@ -106,8 +119,17 @@ export default {
       model: '',
       year: null,
       plate: '',
-      status: 'AVAILABLE', // Estado por defecto
+      vehicleType: null,
+      pricingTier: 'STANDARD', // Se establece por defecto y no se muestra
+      status: 'AVAILABLE',
     })
+
+    const vehicleTypeOptions = [
+      { label: 'Doble Cabina', value: 'PICKUP' },
+      { label: 'Camioneta', value: 'SUV' },
+      { label: 'Sedan', value: 'SEDAN' },
+      { label: 'Hatchback', value: 'HATCHBACK' },
+    ]
 
     const statusOptions = [
       { label: 'Disponible', value: 'AVAILABLE' },
@@ -122,13 +144,18 @@ export default {
       () => props.vehicleToEdit,
       (newVehicle) => {
         if (newVehicle) {
-          formData.value = { ...newVehicle }
+          formData.value = {
+            ...newVehicle,
+            pricingTier: newVehicle.pricingTier || 'STANDARD', // Mantiene el existente o asigna STANDARD
+          }
         } else {
           formData.value = {
             brand: '',
             model: '',
             year: null,
             plate: '',
+            vehicleType: null,
+            pricingTier: 'STANDARD',
             status: 'AVAILABLE',
           }
         }
@@ -150,6 +177,8 @@ export default {
           model: formData.value.model,
           year: formData.value.year,
           plate: formData.value.plate,
+          vehicleType: formData.value.vehicleType,
+          pricingTier: formData.value.pricingTier, // Se envía el valor (STANDARD o el existente)
           status: formData.value.status,
         }
 
@@ -181,6 +210,7 @@ export default {
       loading,
       isEditMode,
       statusOptions,
+      vehicleTypeOptions,
       submitForm,
       onCancel,
     }

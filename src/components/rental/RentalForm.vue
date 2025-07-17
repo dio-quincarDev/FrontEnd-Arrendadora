@@ -124,6 +124,18 @@
           :rules="[(val) => val >= 0 || 'El precio debe ser cero o mayor']"
           class="q-mb-md"
         />
+
+        <q-select
+          v-model="formData.chosenPricingTier"
+          :options="pricingTierOptions"
+          label="Nivel de Precios *"
+          outlined
+          dense
+          emit-value
+          map-options
+          class="q-mb-md"
+          :rules="[(val) => !!val || 'Por favor, selecciona un nivel de precios']"
+        />
       </q-card-section>
 
       <q-separator />
@@ -143,7 +155,7 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, onMounted } from 'vue'
 import { useQuasar, date } from 'quasar'
 import RentalService from 'src/services/rental.service'
 import VehicleService from 'src/services/vehicle.service'
@@ -158,6 +170,9 @@ const props = defineProps({
 
 const emit = defineEmits(['rental-saved', 'cancel'])
 
+import { computed } from 'vue'
+const isEditMode = computed(() => !!props.rentalToEdit)
+
 const $q = useQuasar()
 const rentalFormRef = ref(null)
 const loading = ref(false)
@@ -171,13 +186,18 @@ const formData = ref({
   endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
   totalPrice: 0,
   rentalStatus: 'ACTIVE', // Estado por defecto para nuevas rentas
+  chosenPricingTier: 'STANDARD', // Valor por defecto para el nuevo atributo
 })
 
 const vehicles = ref([])
 const customers = ref([])
-const dailyRates = ref({})
+const actualDailyRates = ref({})
 
-const isEditMode = computed(() => !!props.rentalToEdit)
+const pricingTierOptions = [
+  { label: 'Estándar', value: 'STANDARD' },
+  { label: 'Promocional', value: 'PROMOTIONAL' },
+  { label: 'Premium', value: 'PREMIUM' },
+]
 
 onMounted(async () => {
   await Promise.all([loadVehicles(), loadCustomers()])
@@ -191,6 +211,7 @@ watch(
         ...newRental,
         startDate: date.formatDate(newRental.startDate, 'YYYY-MM-DD'),
         endDate: date.formatDate(newRental.endDate, 'YYYY-MM-DD'),
+        chosenPricingTier: newRental.chosenPricingTier || 'STANDARD',
       }
     } else {
       formData.value = {
@@ -206,22 +227,15 @@ watch(
   { immediate: true },
 )
 
-watch(
-  [() => formData.value.startDate, () => formData.value.endDate, () => formData.value.vehicleId],
-  () => {
-    calculatePrice()
-  },
-  { deep: true },
-)
-
 async function loadVehicles() {
   loadingVehicles.value = true
   try {
     const res = await VehicleService.getVehicles()
     const allVehicles = Array.isArray(res) ? res : []
+    const availableVehicles = allVehicles.filter(v => v.status === 'AVAILABLE')
 
-    vehicles.value = allVehicles.map((v) => {
-      dailyRates.value[v.id] = v.dailyRate || 0
+    vehicles.value = availableVehicles.map((v) => {
+      actualDailyRates.value[v.id] = v.actualDailyRate || 0
       return {
         label: `${v.brand} ${v.model} (${v.year})`,
         value: v.id,
@@ -240,8 +254,16 @@ async function loadCustomers() {
   loadingCustomers.value = true
   try {
     const customersData = await CustomerService.getCustomers()
+    const rentalsResponse = await RentalService.getRentals()
+    const allRentals = Array.isArray(rentalsResponse.data) ? rentalsResponse.data : []
+    const activeCustomerIds = new Set(allRentals
+      .filter(rental => rental.rentalStatus === 'ACTIVE')
+      .map(rental => rental.customerId)
+    )
+
     if (Array.isArray(customersData)) {
-      customers.value = customersData.map((c) => ({
+      const availableCustomers = customersData.filter(customer => !activeCustomerIds.has(customer.id))
+      customers.value = availableCustomers.map((c) => ({
         label: `${c.name}`,
         value: c.id,
         description: `Licencia: ${c.license} - Tel: ${c.phone}`,
@@ -282,14 +304,6 @@ function updateEndDate() {
   }
 }
 
-function calculatePrice() {
-  const start = new Date(formData.value.startDate)
-  const end = new Date(formData.value.endDate)
-  const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) || 1
-  const rate = dailyRates.value[formData.value.vehicleId] || 0
-  formData.value.totalPrice = parseFloat((days * rate).toFixed(2))
-}
-
 async function submitForm() {
   const isValid = await rentalFormRef.value.validate()
   if (!isValid) {
@@ -306,6 +320,7 @@ async function submitForm() {
       endDate: formData.value.endDate,
       totalPrice: formData.value.totalPrice,
       rentalStatus: formData.value.rentalStatus,
+      chosenPricingTier: formData.value.chosenPricingTier,
     }
 
     if (isEditMode.value) {

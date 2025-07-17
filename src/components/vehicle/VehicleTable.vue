@@ -115,6 +115,14 @@ export default {
       columns: [
         { name: 'brand', label: 'Marca', field: 'brand', align: 'left', sortable: true },
         { name: 'model', label: 'Modelo', field: 'model', align: 'left', sortable: true },
+        {
+          name: 'vehicleType',
+          label: 'Tipo de Vehículo',
+          field: 'vehicleType',
+          align: 'left',
+          sortable: true,
+          format: (val) => this.getVehicleTypeDescription(val),
+        },
         { name: 'year', label: 'Año', field: 'year', align: 'left', sortable: true },
         { name: 'plate', label: 'Placa', field: 'plate', align: 'left', sortable: true },
         {
@@ -154,6 +162,15 @@ export default {
   methods: {
     async refresh() {
       await this.loadVehicles()
+    },
+    getVehicleTypeDescription(type) {
+      const mapping = {
+        PICKUP: 'Doble Cabina',
+        SUV: 'Camioneta',
+        SEDAN: 'Sedan',
+        HATCHBACK: 'Hatchback',
+      }
+      return mapping[type] || type
     },
     getBadgeColor(status) {
       if (!status) return 'grey'

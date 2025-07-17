@@ -181,6 +181,13 @@ const columns = [
     align: 'left',
     sortable: true,
   },
+  {
+    name: 'pricingTier',
+    label: 'Tarifa',
+    field: 'pricingTier',
+    align: 'left',
+    sortable: true,
+  },
   { name: 'startDate', label: 'Fecha Inicio', field: 'startDate', align: 'left', sortable: true },
   { name: 'endDate', label: 'Fecha Fin', field: 'endDate', align: 'left', sortable: true },
   {

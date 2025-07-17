@@ -40,6 +40,20 @@
           </q-item-section>
         </q-item>
 
+        <q-item v-if="rental.pricingTier">
+          <q-item-section>
+            <q-item-label overline>Nivel de Precios</q-item-label>
+            <q-item-label>{{ rental.pricingTier }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
+        <q-item v-if="rental.dailyRate">
+          <q-item-section>
+            <q-item-label overline>Tarifa Diaria</q-item-label>
+            <q-item-label>{{ formatCurrency(rental.dailyRate) }}</q-item-label>
+          </q-item-section>
+        </q-item>
+
         <q-item v-if="rental.createdAt">
           <q-item-section>
             <q-item-label overline>Creado</q-item-label>
@@ -84,7 +98,7 @@
 </template>
 
 <script setup>
-import {} from 'vue'
+
 import { date } from 'quasar'
 
 const props = defineProps({
