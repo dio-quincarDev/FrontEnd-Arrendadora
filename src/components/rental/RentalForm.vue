@@ -72,8 +72,8 @@
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date
                       v-model="formData.startDate"
-                      mask="YYYY-MM-DD"
-                      @update:model-value="updateEndDate"
+                      mask="YYYY-MM-DD HH:mm:ss"
+                      @update:model-value="(val) => { formData.startDate = `${val} 08:00:00`; updateEndDate(); }"
                       color="accent"
                     />
                   </q-popup-proxy>
@@ -100,7 +100,7 @@
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-date
                       v-model="formData.endDate"
-                      mask="YYYY-MM-DD"
+                      mask="YYYY-MM-DD HH:mm:ss"
                       :options="(date) => isValidEndDate(date)"
                       color="accent"
                     />
@@ -112,7 +112,7 @@
         </div>
 
         <q-input
-          v-model.number="formData.totalPrice"
+          v-model.number="totalPrice"
           label="Precio Total *"
           type="number"
           outlined
@@ -179,19 +179,40 @@ const loading = ref(false)
 const loadingVehicles = ref(false)
 const loadingCustomers = ref(false)
 
+const VEHICLE_TYPE_RATES = {
+  PICKUP: {
+    PROMOTIONAL: 72.00,
+    STANDARD: 80.00,
+    PREMIUM: 92.00,
+  },
+  SUV: {
+    PROMOTIONAL: 67.50,
+    STANDARD: 75.00,
+    PREMIUM: 86.25,
+  },
+  SEDAN: {
+    PROMOTIONAL: 36.00,
+    STANDARD: 40.00,
+    PREMIUM: 46.00,
+  },
+  HATCHBACK: {
+    PROMOTIONAL: 31.50,
+    STANDARD: 35.00,
+    PREMIUM: 40.25,
+  },
+};
+
 const formData = ref({
   vehicleId: null,
   customerId: null,
-  startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
-  endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
-  totalPrice: 0,
+  startDate: date.formatDate(new Date(), 'YYYY-MM-DD 08:00:00'),
+  endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD 08:00:00'),
   rentalStatus: 'ACTIVE', // Estado por defecto para nuevas rentas
   chosenPricingTier: 'STANDARD', // Valor por defecto para el nuevo atributo
 })
 
 const vehicles = ref([])
 const customers = ref([])
-const actualDailyRates = ref({})
 
 const pricingTierOptions = [
   { label: 'Estándar', value: 'STANDARD' },
@@ -203,29 +224,58 @@ onMounted(async () => {
   await Promise.all([loadVehicles(), loadCustomers()])
 })
 
+const totalPrice = computed(() => {
+  const selectedVehicle = vehicles.value.find(
+    (v) => v.value === formData.value.vehicleId,
+  );
+
+  if (!selectedVehicle || !formData.value.startDate || !formData.value.endDate) {
+    return 0;
+  }
+
+  const startDate = date.extractDate(formData.value.startDate, 'YYYY-MM-DD');
+  const endDate = date.extractDate(formData.value.endDate, 'YYYY-MM-DD');
+
+  if (endDate < startDate) {
+    return 0;
+  }
+
+  const diffDays = date.getDateDiff(endDate, startDate, 'days') + 1; // +1 para incluir el día de fin
+
+  const vehicleType = selectedVehicle.type;
+  const pricingTier = formData.value.chosenPricingTier;
+
+  if (!VEHICLE_TYPE_RATES[vehicleType] || !VEHICLE_TYPE_RATES[vehicleType][pricingTier]) {
+    console.warn(`No se encontró tarifa para el tipo de vehículo ${vehicleType} y nivel de precios ${pricingTier}`);
+    return 0;
+  }
+
+  const dailyRate = VEHICLE_TYPE_RATES[vehicleType][pricingTier];
+  return (dailyRate * diffDays).toFixed(2); // Redondear a 2 decimales
+});
+
 watch(
   () => props.rentalToEdit,
   (newRental) => {
     if (newRental) {
       formData.value = {
         ...newRental,
-        startDate: date.formatDate(newRental.startDate, 'YYYY-MM-DD'),
-        endDate: date.formatDate(newRental.endDate, 'YYYY-MM-DD'),
+        startDate: date.formatDate(newRental.startDate, 'YYYY-MM-DD') + ' 08:00:00',
+        endDate: date.formatDate(newRental.endDate, 'YYYY-MM-DD') + ' 08:00:00',
         chosenPricingTier: newRental.chosenPricingTier || 'STANDARD',
       }
     } else {
       formData.value = {
         vehicleId: null,
         customerId: null,
-        startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
-        endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
-        totalPrice: 0,
+        startDate: date.formatDate(new Date(), 'YYYY-MM-DD 08:00:00'),
+        endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD 08:00:00'),
         rentalStatus: 'ACTIVE',
       }
     }
   },
   { immediate: true },
-)
+);
 
 async function loadVehicles() {
   loadingVehicles.value = true
@@ -235,11 +285,11 @@ async function loadVehicles() {
     const availableVehicles = allVehicles.filter(v => v.status === 'AVAILABLE')
 
     vehicles.value = availableVehicles.map((v) => {
-      actualDailyRates.value[v.id] = v.actualDailyRate || 0
       return {
         label: `${v.brand} ${v.model} (${v.year})`,
         value: v.id,
         description: `Placa: ${v.plate}`,
+        type: v.type, // Asumiendo que el tipo de vehículo viene en la respuesta
       }
     })
   } catch (e) {
@@ -299,7 +349,7 @@ function updateEndDate() {
   ) {
     formData.value.endDate = date.formatDate(
       date.addToDate(new Date(formData.value.startDate), { days: 1 }),
-      'YYYY-MM-DD',
+      'YYYY-MM-DD HH:mm:ss',
     )
   }
 }
@@ -318,7 +368,6 @@ async function submitForm() {
       customerId: formData.value.customerId,
       startDate: formData.value.startDate,
       endDate: formData.value.endDate,
-      totalPrice: formData.value.totalPrice,
       rentalStatus: formData.value.rentalStatus,
       chosenPricingTier: formData.value.chosenPricingTier,
     }
