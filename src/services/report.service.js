@@ -6,9 +6,10 @@ const ALLOWED_REPORT_TYPES = [
   'REVENUE_ANALYSIS',
   'VEHICLE_USAGE',
   'CUSTOMER_ACTIVITY',
-  'MOST_RENTED_VEHICLES',
   'GENERIC_METRICS',
   'RENTAL_TRENDS',
+  'REVENUE_BY_PRICING_TIER',
+  'RENTALS_BY_VEHICLE_TYPE',
 ]
 const DEFAULT_PERIOD = 'ALL_TIME'
 const CACHE_TTL = 300000 // 5 min
@@ -33,20 +34,20 @@ export default {
       responseCache.set(cacheKey, { timestamp: Date.now(), data: responseData })
       return responseData
     } catch (error) {
-      console.error('[Dashboard Service Error]', { 
-        message: error.message, 
+      console.error('[Dashboard Service Error]', {
+        message: error.message,
         status: error.response?.status,
-        params 
-      });
+        params,
+      })
 
       if (error.response) {
-        const status = error.response.status;
+        const status = error.response.status
         const message = `Error ${status} en el servidor. No se pudieron obtener los datos del dashboard.`
-        throw new Error(message);
+        throw new Error(message)
       }
 
       // Para errores de red u otros problemas
-      throw new Error('Error de red al cargar datos del dashboard.');
+      throw new Error('Error de red al cargar datos del dashboard.')
     }
   },
 

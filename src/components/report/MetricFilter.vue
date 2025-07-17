@@ -156,6 +156,8 @@ const reportTypeOptions = [
   { label: 'Análisis de Ingresos', value: 'REVENUE_ANALYSIS' },
   { label: 'Actividad de Clientes', value: 'CUSTOMER_ACTIVITY' },
   { label: 'Vehículos Más Alquilados', value: 'MOST_RENTED_VEHICLES' },
+  { label: 'Ingresos por Nivel de Precios', value: 'REVENUE_BY_PRICING_TIER' },
+  { label: 'Alquileres por Tipo de Vehículo', value: 'RENTALS_BY_VEHICLE_TYPE' },
 ]
 
 // --- COMPUTED ---
