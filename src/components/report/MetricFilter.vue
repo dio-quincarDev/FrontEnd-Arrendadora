@@ -116,6 +116,9 @@ import {
   startOfYear,
   endOfYear,
   format as formatDateFns,
+  startOfQuarter,
+  endOfQuarter,
+  subMonths,
 } from 'date-fns'
 
 // const $q = useQuasar() // No longer needed for notifications
@@ -134,21 +137,31 @@ const debounce = (func, delay = 500) => {
   debounceTimer = setTimeout(() => func(), delay)
 }
 
+// --- CONSTANTS ---
+// Valores de período alineados con el Enum del Backend para evitar inconsistencias.
+const TIME_PERIODS = {
+  MONTHLY: 'MONTHLY',
+  QUARTERLY: 'QUARTERLY',
+  BIANNUAL: 'BIANNUAL',
+  ANNUAL: 'ANNUAL',
+  ALL_TIME: 'ALL_TIME',
+}
+
 // --- REACTIVE STATE ---
 const dateRange = ref({
   from: startOfMonth(new Date()).toISOString().split('T')[0],
   to: endOfMonth(new Date()).toISOString().split('T')[0],
 })
-const period = ref('ALL_TIME')
+const period = ref(TIME_PERIODS.ALL_TIME)
 const reportTypeToDownload = ref('RENTAL_SUMMARY')
 
 // --- OPTIONS ---
 const periodOptions = [
-  { label: 'Todo el Tiempo', value: 'ALL_TIME', icon: 'sym_o_history' },
-  { label: 'Diario', value: 'DAILY', icon: 'sym_o_event_available' },
-  { label: 'Semanal', value: 'WEEKLY', icon: 'sym_o_date_range' },
-  { label: 'Mensual', value: 'MONTHLY', icon: 'sym_o_calendar_month' },
-  { label: 'Trimestral', value: 'QUARTERLY', icon: 'sym_o_event_repeat' },
+  { label: 'Todo el Tiempo', value: TIME_PERIODS.ALL_TIME, icon: 'sym_o_history' },
+  { label: 'Mensual', value: TIME_PERIODS.MONTHLY, icon: 'sym_o_calendar_month' },
+  { label: 'Trimestral', value: TIME_PERIODS.QUARTERLY, icon: 'sym_o_event_repeat' },
+  { label: 'Semestral', value: TIME_PERIODS.BIANNUAL, icon: 'sym_o_calendar_view_day' },
+  { label: 'Anual', value: TIME_PERIODS.ANNUAL, icon: 'sym_o_event' },
 ]
 
 const reportTypeOptions = [
@@ -162,7 +175,7 @@ const reportTypeOptions = [
 
 // --- COMPUTED ---
 const dateRangeDisplay = computed(() => {
-  if (period.value === 'ALL_TIME') return 'Todo el historial'
+  if (period.value === TIME_PERIODS.ALL_TIME) return 'Todo el historial'
   if (dateRange.value && dateRange.value.from && dateRange.value.to) {
     const from = formatDateFns(new Date(dateRange.value.from), 'dd/MM/yyyy')
     const to = formatDateFns(new Date(dateRange.value.to), 'dd/MM/yyyy')
@@ -172,26 +185,41 @@ const dateRangeDisplay = computed(() => {
 })
 
 // --- METHODS ---
+const formatDateForApi = (date) => date.toISOString().split('T')[0]
+
 const setRelativeDateRange = (days) => {
   const end = new Date()
   const start = subDays(end, days)
-  dateRange.value = {
-    from: start.toISOString().split('T')[0],
-    to: end.toISOString().split('T')[0],
-  }
+  dateRange.value = { from: formatDateForApi(start), to: formatDateForApi(end) }
 }
 
 const setCurrentMonth = () => {
+  const now = new Date()
   dateRange.value = {
-    from: startOfMonth(new Date()).toISOString().split('T')[0],
-    to: endOfMonth(new Date()).toISOString().split('T')[0],
+    from: formatDateForApi(startOfMonth(now)),
+    to: formatDateForApi(endOfMonth(now)),
   }
 }
 
-const setCurrentYear = () => {
+const setCurrentQuarter = () => {
+  const now = new Date()
   dateRange.value = {
-    from: startOfYear(new Date()).toISOString().split('T')[0],
-    to: endOfYear(new Date()).toISOString().split('T')[0],
+    from: formatDateForApi(startOfQuarter(now)),
+    to: formatDateForApi(endOfQuarter(now)),
+  }
+}
+
+const setLastSixMonths = () => {
+  const end = new Date()
+  const start = subMonths(end, 6)
+  dateRange.value = { from: formatDateForApi(start), to: formatDateForApi(end) }
+}
+
+const setCurrentYear = () => {
+  const now = new Date()
+  dateRange.value = {
+    from: formatDateForApi(startOfYear(now)),
+    to: formatDateForApi(endOfYear(now)),
   }
 }
 
@@ -199,7 +227,7 @@ const emitFilters = () => {
   let from = null
   let to = null
 
-  if (period.value !== 'ALL_TIME') {
+  if (period.value !== TIME_PERIODS.ALL_TIME) {
     from = dateRange.value.from
     to = dateRange.value.to
 
@@ -218,22 +246,36 @@ const emitFilters = () => {
 }
 
 // --- WATCHERS ---
-// Observar cambios en el periodo para ajustar la selección de fechas
+// Observar cambios en el periodo para ajustar la selección de fechas de forma inteligente.
 watch(period, (newPeriod) => {
-  if (newPeriod === 'ALL_TIME') {
-    dateRange.value = { from: null, to: null }
-  } else {
-    // Si el usuario cambia a un periodo que requiere fecha y no hay una, se establece el mes actual por defecto
-    if (!dateRange.value.from || !dateRange.value.to) {
+  switch (newPeriod) {
+    case TIME_PERIODS.ALL_TIME:
+      dateRange.value = { from: null, to: null }
+      break
+    case TIME_PERIODS.MONTHLY:
       setCurrentMonth()
-    }
+      break
+    case TIME_PERIODS.QUARTERLY:
+      setCurrentQuarter()
+      break
+    case TIME_PERIODS.BIANNUAL:
+      setLastSixMonths()
+      break
+    case TIME_PERIODS.ANNUAL:
+      setCurrentYear()
+      break
+    default:
+      // Si el periodo no coincide con ninguno, o es la primera vez, se establece el mes actual.
+      if (!dateRange.value.from || !dateRange.value.to) {
+        setCurrentMonth()
+      }
+      break
   }
-  // No es necesario llamar a emitFilters aquí, el watcher de abajo lo hará.
 })
 
 // Observador central que reacciona a cualquier cambio en los filtros y emite con debounce
 watch(
-  [period, dateRange, reportTypeToDownload],
+  [dateRange, reportTypeToDownload],
   () => {
     debounce(emitFilters)
   },
@@ -262,5 +304,6 @@ watch(
 :deep(.q-field--disabled) {
   opacity: 0.6 !important; // Opacidad reducida para indicar que está inactivo
   background-color: #f5f5f5; // Fondo ligeramente gris
+  cursor: not-allowed; // Mejora la UX indicando que el campo no es interactivo
 }
 </style>

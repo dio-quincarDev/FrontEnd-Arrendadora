@@ -102,22 +102,22 @@ const chartOptions = computed(() => {
         formatter: '{a} <br/>{b}: {c} ({d}%)',
       },
       legend: {
-        show: !isMobile, // Ocultar leyenda en móvil para más espacio
-        orient: 'vertical',
-        left: 'auto',
-        right: '5%',
-        top: 'center',
+        show: true, // Siempre mostrar la leyenda
+        orient: isMobile ? 'horizontal' : 'vertical', // Horizontal en móvil
+        left: isMobile ? 'center' : 'auto',
+        right: isMobile ? 'auto' : '5%',
+        top: isMobile ? 'bottom' : 'center', // Abajo en móvil
         textStyle: {
-          fontSize: 12,
+          fontSize: 10, // Un poco más pequeño para móvil
           color: '#555',
         },
-        itemGap: 10,
+        itemGap: 8, // Menos espacio entre items en móvil
       },
       series: props.chartData.datasets.map((ds) => ({
         name: ds.label,
         type: 'pie',
         radius: ['40%', '70%'],
-        center: isMobile ? ['50%', '50%'] : ['40%', '50%'], // Centrar en móvil
+        center: isMobile ? ['50%', '45%'] : ['40%', '50%'], // Subir un poco el gráfico en móvil
         data: props.chartData.labels.map((label, i) => ({
           name: label,
           value: ds.data[i],
@@ -126,15 +126,10 @@ const chartOptions = computed(() => {
           itemStyle: { shadowBlur: 10, shadowOffsetX: 0, shadowColor: 'rgba(0, 0, 0, 0.5)' },
         },
         label: {
-          show: !isMobile, // Ocultar etiquetas en móvil
-          position: 'outside',
-          formatter: '{b}: {d}%',
-          fontSize: 11,
-          color: '#333',
-          lineHeight: 16,
+          show: false, // Ocultar etiquetas para un look más limpio, la leyenda es suficiente
         },
         labelLine: {
-          show: !isMobile,
+          show: false,
         },
         itemStyle: {
           color: (params) => CHART_COLORS[params.dataIndex % CHART_COLORS.length],
