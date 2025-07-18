@@ -22,12 +22,20 @@
           :loading="loadingVehicles"
           :disable="loadingVehicles || isEditMode"
           class="q-mb-md"
+          @update:model-value="onVehicleChange"
         >
           <template v-slot:option="scope">
             <q-item v-bind="scope.itemProps">
               <q-item-section>
                 <q-item-label>{{ scope.opt.label }}</q-item-label>
                 <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge
+                  :color="getVehicleTypeColor(scope.opt.type)"
+                  :label="getVehicleTypeDisplayName(scope.opt.vehicleType)"
+                  class="text-capitalize"
+                />
               </q-item-section>
             </q-item>
           </template>
@@ -59,30 +67,27 @@
         </q-select>
 
         <div class="row q-col-gutter-md q-mb-md">
-          <div class="col-12 col-sm-6">
+          <div class="col-12">
             <q-input
-              v-model="formData.startDate"
-              label="Fecha Inicio *"
+              v-model="formattedDateRange"
+              label="Fechas de Renta *"
               outlined
               dense
-              :rules="[(val) => !!val || 'Por favor, selecciona la fecha de inicio']"
+              readonly
+              :rules="[(val) => !!val || 'Por favor, selecciona las fechas de renta']"
             >
               <template v-slot:append>
                 <q-icon name="sym_o_event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="formData.startDate"
-                      mask="YYYY-MM-DD"
-                      @update:model-value="updateEndDate"
-                      color="accent"
-                      v-close-popup
-                    />
+                    <q-date v-model="formData.dateRange" range mask="YYYY-MM-DD" color="accent" />
                   </q-popup-proxy>
                 </q-icon>
               </template>
             </q-input>
           </div>
+        </div>
 
+        <div class="row q-col-gutter-md q-mb-md">
           <div class="col-12 col-sm-6">
             <q-input
               v-model="formData.startTime"
@@ -96,35 +101,6 @@
                 <q-icon name="sym_o_access_time" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
                     <q-time v-model="formData.startTime" format24h color="accent" v-close-popup />
-                  </q-popup-proxy>
-                </q-icon>
-              </template>
-            </q-input>
-          </div>
-        </div>
-
-        <div class="row q-col-gutter-md q-mb-md">
-          <div class="col-12 col-sm-6">
-            <q-input
-              v-model="formData.endDate"
-              label="Fecha Fin *"
-              outlined
-              dense
-              :rules="[
-                (val) => !!val || 'Por favor, selecciona la fecha de fin',
-                // La validación combinada de fecha/hora se hace en submitForm
-              ]"
-            >
-              <template v-slot:append>
-                <q-icon name="sym_o_event" class="cursor-pointer">
-                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date
-                      v-model="formData.endDate"
-                      mask="YYYY-MM-DD"
-                      :min="formData.startDate"
-                      color="accent"
-                      v-close-popup
-                    />
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -151,17 +127,71 @@
           </div>
         </div>
 
+        <!-- CAMPO REACTIVO DE TARIFAS -->
         <q-select
           v-model="formData.chosenPricingTier"
-          :options="pricingTierOptions"
+          :options="availablePricingTiers"
+          option-value="value"
+          option-label="label"
           label="Nivel de Precios *"
           outlined
           dense
           emit-value
           map-options
+          :loading="loadingPricingTiers"
+          :disable="!formData.vehicleId || loadingPricingTiers"
           class="q-mb-md"
           :rules="[(val) => !!val || 'Por favor, selecciona un nivel de precios']"
-        />
+          @update:model-value="onPricingTierChange"
+        >
+          <template v-slot:option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section>
+                <q-item-label>{{ scope.opt.label }}</q-item-label>
+                <q-item-label caption class="text-positive">
+                  ${{ scope.opt.price }}/día
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge :color="getPricingTierColor(scope.opt.value)" :label="scope.opt.value" />
+              </q-item-section>
+            </q-item>
+          </template>
+
+          <template v-slot:no-option>
+            <q-item>
+              <q-item-section class="text-grey">
+                {{ formData.vehicleId ? 'Cargando tarifas...' : 'Selecciona un vehículo primero' }}
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <!-- PREVIEW DE PRECIO CALCULADO -->
+        <q-card
+          v-if="selectedPricingInfo && rentalDuration"
+          class="pricing-preview q-mt-md"
+          flat
+          bordered
+        >
+          <q-card-section>
+            <div class="row items-center justify-between">
+              <div class="col">
+                <div class="text-subtitle2 text-primary">
+                  {{ selectedPricingInfo.label }}
+                </div>
+                <div class="text-caption text-grey-7">
+                  {{ selectedVehicleInfo?.label }}
+                </div>
+              </div>
+              <div class="col-auto text-right">
+                <div class="text-h6 text-positive">${{ selectedPricingInfo.price }}/día</div>
+                <div class="text-caption text-grey-7">{{ rentalDuration }} día(s)</div>
+                <div class="text-body1 text-weight-medium">Total: ${{ totalPrice }}</div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
       </q-card-section>
 
       <q-separator />
@@ -203,63 +233,107 @@ const rentalFormRef = ref(null)
 const loading = ref(false)
 const loadingVehicles = ref(false)
 const loadingCustomers = ref(false)
+const loadingPricingTiers = ref(false)
 
 const formData = ref({
   vehicleId: null,
   customerId: null,
-  startDate: date.formatDate(new Date(), 'YYYY-MM-DD'), // Solo fecha
-  startTime: '08:00', // Hora separada por defecto
-  endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'), // Solo fecha
-  endTime: '08:00', // Hora separada por defecto
-  rentalStatus: 'ACTIVE', // Estado por defecto para nuevas rentas
-  chosenPricingTier: 'STANDARD', // Valor por defecto para el nuevo atributo
+  dateRange: {
+    from: date.formatDate(new Date(), 'YYYY-MM-DD'),
+    to: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
+  },
+  startTime: '08:00',
+  endTime: '08:00',
+  rentalStatus: 'ACTIVE',
+  chosenPricingTier: null,
 })
 
 const vehicles = ref([])
 const customers = ref([])
+const availablePricingTiers = ref([])
 
-const pricingTierOptions = [
-  { label: 'Estándar', value: 'STANDARD' },
-  { label: 'Promocional', value: 'PROMOTIONAL' },
-  { label: 'Premium', value: 'PREMIUM' },
-]
+// CONFIGURACIÓN DE TARIFAS POR TIPO DE VEHÍCULO (SINCRONIZADO CON BACKEND ENUM)
+const pricingConfig = {
+  PICKUP: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 72.0 },
+    { label: 'Estándar', value: 'STANDARD', price: 80.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 92.0 },
+  ],
+  SUV: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 67.5 },
+    { label: 'Estándar', value: 'STANDARD', price: 75.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 86.25 },
+  ],
+  SEDAN: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 36.0 },
+    { label: 'Estándar', value: 'STANDARD', price: 40.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 46.0 },
+  ],
+  HATCHBACK: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 31.5 },
+    { label: 'Estándar', value: 'STANDARD', price: 35.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 40.25 },
+  ],
+  DEFAULT: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 36.0 },
+    { label: 'Estándar', value: 'STANDARD', price: 40.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 46.0 },
+  ],
+}
 
+// COMPUTED PROPERTIES
+const selectedVehicleInfo = computed(() => {
+  return vehicles.value.find((v) => v.value === formData.value.vehicleId)
+})
+
+const selectedPricingInfo = computed(() => {
+  return availablePricingTiers.value.find((p) => p.value === formData.value.chosenPricingTier)
+})
+
+const formattedDateRange = computed(() => {
+  if (
+    !formData.value.dateRange ||
+    (!formData.value.dateRange.from && !formData.value.dateRange.to)
+  ) {
+    return ''
+  }
+  const from = formData.value.dateRange.from
+  const to = formData.value.dateRange.to
+
+  if (from && to) {
+    return `${date.formatDate(from, 'DD/MM/YYYY')} - ${date.formatDate(to, 'DD/MM/YYYY')}`
+  } else if (from) {
+    return date.formatDate(from, 'DD/MM/YYYY')
+  } else if (to) {
+    return date.formatDate(to, 'DD/MM/YYYY')
+  }
+  return ''
+})
+
+const rentalDuration = computed(() => {
+  if (!formData.value.dateRange || !formData.value.dateRange.from || !formData.value.dateRange.to)
+    return 0
+
+  const startDateTime = new Date(`${formData.value.dateRange.from} ${formData.value.startTime}`)
+  const endDateTime = new Date(`${formData.value.dateRange.to} ${formData.value.endTime}`)
+
+  if (endDateTime < startDateTime) return 0 // Evitar duraciones negativas
+
+  const diffTime = Math.abs(endDateTime.getTime() - startDateTime.getTime())
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+  return diffDays || 1 // Mínimo 1 día
+})
+
+const totalPrice = computed(() => {
+  if (!selectedPricingInfo.value) return 0
+  return selectedPricingInfo.value.price * rentalDuration.value
+})
+
+// MÉTODOS DE CARGA
 onMounted(async () => {
   await Promise.all([loadVehicles(), loadCustomers()])
 })
-
-watch(
-  () => props.rentalToEdit,
-  (newRental) => {
-    if (newRental) {
-      // Al editar, desglosar la fecha y hora completas en campos separados
-      const parsedStartDate = date.extractDate(newRental.startDate, 'YYYY-MM-DD HH:mm:ss')
-      const parsedEndDate = date.extractDate(newRental.endDate, 'YYYY-MM-DD HH:mm:ss')
-
-      formData.value = {
-        ...newRental,
-        startDate: date.formatDate(parsedStartDate, 'YYYY-MM-DD'),
-        startTime: date.formatDate(parsedStartDate, 'HH:mm'),
-        endDate: date.formatDate(parsedEndDate, 'YYYY-MM-DD'),
-        endTime: date.formatDate(parsedEndDate, 'HH:mm'),
-        chosenPricingTier: newRental.chosenPricingTier || 'STANDARD',
-      }
-    } else {
-      // Reiniciar formData para nuevas rentas
-      formData.value = {
-        vehicleId: null,
-        customerId: null,
-        startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
-        startTime: '08:00',
-        endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
-        endTime: '08:00',
-        rentalStatus: 'ACTIVE',
-        chosenPricingTier: 'STANDARD',
-      }
-    }
-  },
-  { immediate: true },
-)
 
 async function loadVehicles() {
   loadingVehicles.value = true
@@ -269,11 +343,13 @@ async function loadVehicles() {
     const availableVehicles = allVehicles.filter((v) => v.status === 'AVAILABLE')
 
     vehicles.value = availableVehicles.map((v) => {
+      console.log(`Vehículo ${v.id}: Tipo original -> ${v.vehicleType}`); // DEBUGGING: Usando vehicleType
       return {
         label: `${v.brand} ${v.model} (${v.year})`,
         value: v.id,
         description: `Placa: ${v.plate}`,
-        type: v.type, // Asumiendo que el tipo de vehículo viene en la respuesta
+        type: v.vehicleType?.toString().toUpperCase().trim() || 'DEFAULT', // Usando vehicleType
+        dailyRate: v.dailyRate, // Asegurar que dailyRate esté disponible
       }
     })
   } catch (e) {
@@ -308,11 +384,6 @@ async function loadCustomers() {
     } else {
       console.error('La respuesta de clientes no contiene un array válido:', customersData)
       customers.value = []
-      $q.notify({
-        type: 'negative',
-        message: 'Error: Formato de datos de clientes inesperado.',
-        position: 'top',
-      })
     }
   } catch (e) {
     console.error('Error al cargar clientes:', e)
@@ -323,25 +394,155 @@ async function loadCustomers() {
   }
 }
 
-
-
-// Ajusta la fecha de fin si la fecha de inicio cambia y la de fin es anterior
-function updateEndDate() {
-  if (formData.value.startDate) {
-    const startDay = date.extractDate(formData.value.startDate, 'YYYY-MM-DD')
-    const endDay = date.extractDate(formData.value.endDate, 'YYYY-MM-DD')
-
-    if (date.isBefore(endDay, startDay, 'day')) {
-      formData.value.endDate = formData.value.startDate
-      formData.value.endTime = formData.value.startTime
-    } else if (date.isSame(endDay, startDay, 'day')) {
-      if (formData.value.endTime < formData.value.startTime) {
-        formData.value.endTime = formData.value.startTime
-      }
-    }
+// MÉTODO REACTIVO PARA CAMBIO DE VEHÍCULO
+async function onVehicleChange(vehicleId) {
+  if (!vehicleId) {
+    availablePricingTiers.value = []
+    formData.value.chosenPricingTier = null
+    return
   }
-  rentalFormRef.value.validate('endDate')
+
+  loadingPricingTiers.value = true
+
+  try {
+    const selectedVehicle = vehicles.value.find((v) => v.value === vehicleId)
+    if (!selectedVehicle) {
+      throw new Error('Vehículo no encontrado')
+    }
+
+    const vehicleType = selectedVehicle.type?.toUpperCase().trim() || 'DEFAULT'
+    console.log(`DEBUG: vehicleType normalizado: '${vehicleType}'`)
+    const pricingOptions = pricingConfig[vehicleType] || pricingConfig.DEFAULT
+    console.log(`DEBUG: pricingOptions seleccionadas:`, pricingOptions)
+
+    availablePricingTiers.value = [...pricingOptions]
+
+    // Auto-seleccionar STANDARD si está disponible
+    const standardOption = availablePricingTiers.value.find((p) => p.value === 'STANDARD')
+    if (standardOption && !formData.value.chosenPricingTier) {
+      formData.value.chosenPricingTier = standardOption.value
+    }
+
+    $q.notify({
+      type: 'info',
+      message: `Tarifas para ${getVehicleTypeDisplayName(vehicleType)} cargadas correctamente`,
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch (error) {
+    console.error('❌ Error al cargar tarifas:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar las tarifas del vehículo',
+      position: 'top',
+    })
+    availablePricingTiers.value = []
+  } finally {
+    loadingPricingTiers.value = false
+  }
 }
+
+function onPricingTierChange(pricingTier) {
+  if (pricingTier && selectedPricingInfo.value) {
+    $q.notify({
+      type: 'positive',
+      message: `Tarifa ${selectedPricingInfo.value.label} seleccionada: ${selectedPricingInfo.value.price}/día`,
+      position: 'top',
+      timeout: 2000,
+    })
+  }
+}
+
+// MÉTODOS DE UTILIDAD
+function getVehicleTypeColor(type) {
+  const colors = {
+    PICKUP: 'brown',
+    SUV: 'green',
+    SEDAN: 'blue',
+    HATCHBACK: 'purple',
+    DEFAULT: 'grey',
+  }
+  return colors[type] || 'grey'
+}
+
+function getVehicleTypeDisplayName(type) {
+  const displayNames = {
+    PICKUP: 'Doble Cabina',
+    SUV: 'Camioneta',
+    SEDAN: 'Sedan',
+    HATCHBACK: 'Hatchback',
+  }
+  return displayNames[type] || type // Si no se encuentra, devuelve el tipo original
+}
+
+function getPricingTierColor(tier) {
+  const colors = {
+    PROMOTIONAL: 'green',
+    STANDARD: 'blue',
+    PREMIUM: 'orange',
+  }
+  return colors[tier] || 'grey'
+}
+
+// WATCHERS
+watch(
+  () => props.rentalToEdit,
+  (newRental) => {
+    if (newRental) {
+      const parsedStartDate = date.extractDate(newRental.startDate, 'YYYY-MM-DD HH:mm:ss')
+      const parsedEndDate = date.extractDate(newRental.endDate, 'YYYY-MM-DD HH:mm:ss')
+
+      formData.value = {
+        ...newRental,
+        dateRange: {
+          from: date.formatDate(parsedStartDate, 'YYYY-MM-DD'),
+          to: date.formatDate(parsedEndDate, 'YYYY-MM-DD'),
+        },
+        startTime: date.formatDate(parsedStartDate, 'HH:mm'),
+        endTime: date.formatDate(parsedEndDate, 'HH:mm'),
+        chosenPricingTier: newRental.chosenPricingTier || null,
+      }
+
+      // Cargar tarifas para el vehículo editado
+      if (newRental.vehicleId) {
+        onVehicleChange(newRental.vehicleId)
+      }
+    } else {
+      formData.value = {
+        vehicleId: null,
+        customerId: null,
+        dateRange: {
+          from: date.formatDate(new Date(), 'YYYY-MM-DD'),
+          to: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
+        },
+        startTime: '08:00',
+        endTime: '08:00',
+        rentalStatus: 'ACTIVE',
+        chosenPricingTier: null,
+      }
+      availablePricingTiers.value = []
+    }
+  },
+  { immediate: true },
+)
+
+// Eliminar updateEndDate ya no es necesario con el rango de fechas
+// function updateEndDate() {
+//   if (formData.value.startDate) {
+//     const startDay = date.extractDate(formData.value.startDate, 'YYYY-MM-DD')
+//     const endDay = date.extractDate(formData.value.endDate, 'YYYY-MM-DD')
+
+//     if (date.isBefore(endDay, startDay, 'day')) {
+//       formData.value.endDate = formData.value.startDate
+//       formData.value.endTime = formData.value.startTime
+//     } else if (date.isSame(endDay, startDay, 'day')) {
+//       if (formData.value.endTime < formData.value.startTime) {
+//         formData.value.endTime = formData.value.startTime
+//       }
+//     }
+//   }
+//   rentalFormRef.value?.validate('endDate')
+// }
 
 async function submitForm() {
   const isValid = await rentalFormRef.value.validate()
@@ -350,11 +551,9 @@ async function submitForm() {
     return
   }
 
-  // Combinar fecha y hora para enviar al backend
-  const fullStartDate = `${formData.value.startDate} ${formData.value.startTime}:00`
-  const fullEndDate = `${formData.value.endDate} ${formData.value.endTime}:00`
+  const fullStartDate = `${formData.value.dateRange.from} ${formData.value.startTime}:00`
+  const fullEndDate = `${formData.value.dateRange.to} ${formData.value.endTime}:00`
 
-  // **Validación final de la fecha y hora de fin combinada**
   if (new Date(fullEndDate) < new Date(fullStartDate)) {
     $q.notify({
       type: 'negative',
@@ -398,5 +597,20 @@ const onCancel = () => {
 </script>
 
 <style scoped lang="scss">
-/* Tus estilos aquí */
+.pricing-preview {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+  .q-card-section {
+    padding: 12px 16px;
+  }
+}
+
+.q-badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.text-capitalize {
+  text-transform: capitalize;
+}
 </style>
