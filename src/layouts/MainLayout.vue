@@ -6,7 +6,15 @@
 
         <q-toolbar-title class="app-title"> Arrendadora Alberto Junior </q-toolbar-title>
 
-        <q-btn flat label="Cerrar sesión" icon="sym_o_logout" @click="logout" class="logout-btn" />
+        <q-btn
+          flat
+          dense
+          round
+          icon="sym_o_logout"
+          aria-label="Cerrar sesión"
+          @click="logout"
+          class="logout-btn"
+        />
       </q-toolbar>
     </q-header>
 
@@ -21,6 +29,10 @@
       <q-list>
         <q-item-label header class="menu-header"> Menú Principal </q-item-label>
 
+        <q-item to="/" clickable v-ripple :exact="true" class="q-router-link--active-subtle">
+          <q-item-section avatar><q-icon name="sym_o_home" /></q-item-section>
+          <q-item-section>Inicio</q-item-section>
+        </q-item>
         <q-item
           to="/reports/dashboard"
           clickable
@@ -30,10 +42,6 @@
         >
           <q-item-section avatar><q-icon name="sym_o_dashboard" /></q-item-section>
           <q-item-section>Dashboard</q-item-section>
-        </q-item>
-        <q-item to="/" clickable v-ripple :exact="true" class="q-router-link--active-subtle">
-          <q-item-section avatar><q-icon name="sym_o_home" /></q-item-section>
-          <q-item-section>Inicio</q-item-section>
         </q-item>
 
         <q-separator class="menu-separator" />
@@ -103,10 +111,6 @@ function logout() {
 /* ¡Importante: asegúrate de que lang="scss" esté presente! */
 
 /* Si necesitas ajustar algo específico del header que no puedes lograr con app.scss */
-.main-header {
-  /* background-color: $primary; Esto ya debería ser manejado por app.scss */
-  /* color: $dark; */
-}
 
 /* Estilo para el título de la aplicación en la barra superior */
 .app-title {
@@ -115,14 +119,14 @@ function logout() {
 }
 
 /* Estilo para el botón de cerrar sesión */
-.logout-btn {
-  /* color: $negative; */
-}
+/* .logout-btn {
+  color: $negative;
+} */
 
 /* Estilo para el QDrawer si necesitas ajustes que no están en app.scss */
-.q-drawer-custom {
-  /* background-color: $primary; */
-}
+/* .q-drawer-custom {
+  background-color: $primary;
+} */
 
 /* Estilo para el encabezado de las secciones del menú */
 .menu-header {

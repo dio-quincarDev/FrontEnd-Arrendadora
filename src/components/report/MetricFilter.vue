@@ -6,6 +6,7 @@
 
     <q-card-section class="q-pt-sm">
       <div class="row q-col-gutter-md items-start">
+        <!-- Período -->
         <div class="col-12 col-md-4 col-lg-3">
           <q-select
             v-model="period"
@@ -19,6 +20,7 @@
             option-value="value"
             option-label="label"
             color="primary"
+            class="filter-input"
           >
             <template v-slot:option="scope">
               <q-item v-bind="scope.itemProps">
@@ -33,16 +35,17 @@
           </q-select>
         </div>
 
-        <div class="col-12 col-md-4 col-lg-4" v-if="period !== 'ALL_TIME'">
+        <!-- Rango de Fechas -->
+        <div class="col-12 col-md-4 col-lg-4">
           <q-input
             filled
             dense
             v-model="dateRangeDisplay"
             label="Rango de Fechas"
-            mask="date"
-            :rules="['date']"
             color="primary"
             readonly
+            :disable="period === 'ALL_TIME'"
+            class="filter-input"
           >
             <template v-slot:append>
               <q-icon name="sym_o_event" class="cursor-pointer">
@@ -81,7 +84,8 @@
           </q-input>
         </div>
 
-        <div class="col-12 col-md-4 col-lg-3">
+        <!-- Tipo de Reporte -->
+        <div class="col-12 col-md-4 col-lg-5">
           <q-select
             v-model="reportTypeToDownload"
             :options="reportTypeOptions"
@@ -94,18 +98,7 @@
             option-value="value"
             option-label="label"
             color="secondary"
-          />
-        </div>
-
-        <div class="col-12 col-md-4 col-lg-2">
-          <q-btn
-            color="primary"
-            label="Aplicar Filtros"
-            icon="sym_o_filter_alt"
-            @click="emitFilters"
-            :loading="props.loading"
-            class="full-width q-py-sm"
-            unelevated
+            class="filter-input"
           />
         </div>
       </div>
@@ -115,7 +108,7 @@
 
 <script setup>
 import { ref, defineEmits, watch, computed } from 'vue'
-import { useQuasar } from 'quasar'
+// import { useQuasar } from 'quasar' // No longer needed
 import {
   endOfMonth,
   startOfMonth,
@@ -125,23 +118,31 @@ import {
   format as formatDateFns,
 } from 'date-fns'
 
-const $q = useQuasar()
+// const $q = useQuasar() // No longer needed for notifications
 const emit = defineEmits(['update-filters'])
 
-// Props
-const props = defineProps({
-  loading: { type: Boolean, default: false }, // Prop para el estado de carga externo
+// Props are received but not directly used in the script, so no need to assign to a variable.
+defineProps({
+  loading: { type: Boolean, default: false },
 })
 
-// Estados reactivos
+// --- DEBOUNCE UTILITY ---
+// Utility para retrasar la ejecución de una función, evitando llamadas excesivas a la API
+let debounceTimer
+const debounce = (func, delay = 500) => {
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => func(), delay)
+}
+
+// --- REACTIVE STATE ---
 const dateRange = ref({
   from: startOfMonth(new Date()).toISOString().split('T')[0],
   to: endOfMonth(new Date()).toISOString().split('T')[0],
 })
 const period = ref('ALL_TIME')
-const reportTypeToDownload = ref('RENTAL_SUMMARY') // Valor por defecto para el tipo de reporte
+const reportTypeToDownload = ref('RENTAL_SUMMARY')
 
-// Opciones de periodo
+// --- OPTIONS ---
 const periodOptions = [
   { label: 'Todo el Tiempo', value: 'ALL_TIME', icon: 'sym_o_history' },
   { label: 'Diario', value: 'DAILY', icon: 'sym_o_event_available' },
@@ -150,7 +151,6 @@ const periodOptions = [
   { label: 'Trimestral', value: 'QUARTERLY', icon: 'sym_o_event_repeat' },
 ]
 
-// Opciones de tipo de reporte a descargar (basado en tu backend)
 const reportTypeOptions = [
   { label: 'Resumen de Alquileres', value: 'RENTAL_SUMMARY' },
   { label: 'Análisis de Ingresos', value: 'REVENUE_ANALYSIS' },
@@ -158,17 +158,18 @@ const reportTypeOptions = [
   { label: 'Vehículos Más Alquilados', value: 'MOST_RENTED_VEHICLES' },
 ]
 
-// Computed para mostrar el rango de fechas en el input
+// --- COMPUTED ---
 const dateRangeDisplay = computed(() => {
+  if (period.value === 'ALL_TIME') return 'Todo el historial'
   if (dateRange.value && dateRange.value.from && dateRange.value.to) {
     const from = formatDateFns(new Date(dateRange.value.from), 'dd/MM/yyyy')
     const to = formatDateFns(new Date(dateRange.value.to), 'dd/MM/yyyy')
     return `${from} - ${to}`
   }
-  return ''
+  return 'Seleccione un rango'
 })
 
-// Métodos para establecer rangos de fechas predefinidos
+// --- METHODS ---
 const setRelativeDateRange = (days) => {
   const end = new Date()
   const start = subDays(end, days)
@@ -192,7 +193,6 @@ const setCurrentYear = () => {
   }
 }
 
-// Emitir filtros al componente padre
 const emitFilters = () => {
   let from = null
   let to = null
@@ -202,11 +202,7 @@ const emitFilters = () => {
     to = dateRange.value.to
 
     if (!from || !to) {
-      $q.notify({
-        type: 'negative',
-        message: 'Seleccione un rango de fechas válido',
-        position: 'top',
-      })
+      // No notificar, simplemente no emitir si el rango no es válido
       return
     }
   }
@@ -219,16 +215,28 @@ const emitFilters = () => {
   })
 }
 
+// --- WATCHERS ---
 // Observar cambios en el periodo para ajustar la selección de fechas
 watch(period, (newPeriod) => {
   if (newPeriod === 'ALL_TIME') {
     dateRange.value = { from: null, to: null }
   } else {
+    // Si el usuario cambia a un periodo que requiere fecha y no hay una, se establece el mes actual por defecto
     if (!dateRange.value.from || !dateRange.value.to) {
       setCurrentMonth()
     }
   }
+  // No es necesario llamar a emitFilters aquí, el watcher de abajo lo hará.
 })
+
+// Observador central que reacciona a cualquier cambio en los filtros y emite con debounce
+watch(
+  [period, dateRange, reportTypeToDownload],
+  () => {
+    debounce(emitFilters)
+  },
+  { deep: true }, // 'deep' es importante para que el watcher reaccione a cambios en el objeto dateRange
+)
 </script>
 
 <style scoped lang="scss">
@@ -237,5 +245,20 @@ watch(period, (newPeriod) => {
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
   background: linear-gradient(145deg, #ffffff, #f0f0f0);
   color: #333;
+}
+
+/*
+  Mejora de la visibilidad de las etiquetas de los filtros.
+  Se usa ::v-deep para asegurar que los estilos se apliquen a los componentes de Quasar.
+*/
+:deep(.filter-input .q-field__label) {
+  color: #2c2c2c !important; // Usa el color $dark para alto contraste
+  font-weight: 500; // Un poco más de peso para legibilidad
+}
+
+/* Estilo para el input deshabilitado */
+:deep(.q-field--disabled) {
+  opacity: 0.6 !important; // Opacidad reducida para indicar que está inactivo
+  background-color: #f5f5f5; // Fondo ligeramente gris
 }
 </style>
