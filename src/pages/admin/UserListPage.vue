@@ -31,6 +31,7 @@
                 color="negative"
                 size="sm"
                 @click="confirmDelete(props.row.id)"
+                :disable="props.row.role === 'SUPER_ADMIN' || props.row.id === currentUserId"
               />
               <q-btn
                 flat
@@ -39,6 +40,7 @@
                 color="accent"
                 size="sm"
                 @click="changeRole(props.row)"
+                :disable="props.row.role === 'SUPER_ADMIN' || props.row.id === currentUserId"
               />
             </q-td>
           </template>
@@ -55,7 +57,7 @@
         <q-card-section class="q-pt-none">
           <q-select
             v-model="selectedRole"
-            :options="roleOptions"
+            :options="filteredRoleOptions"
             label="Seleccionar Rol"
             emit-value
             map-options
@@ -72,14 +74,18 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { useQuasar } from 'quasar';
 import { useUserStore } from 'src/stores/user.module';
+import AuthService from 'src/services/auth.service';
 
 const userStore = useUserStore();
 const router = useRouter();
 const $q = useQuasar();
+
+const currentUserId = AuthService.getCurrentUserId();
+
 
 const columns = [
   { name: 'id', label: 'ID', align: 'left', field: 'id' },
@@ -92,14 +98,34 @@ const columns = [
 const showRoleDialog = ref(false);
 const userToChangeRole = ref(null);
 const selectedRole = ref(null);
-const roleOptions = [
+const allRoleOptions = [
   { label: 'Usuario', value: 'USER' },
   { label: 'Administrador', value: 'ADMIN' },
   { label: 'Super Administrador', value: 'SUPER_ADMIN' },
 ];
 
-onMounted(() => {
-  userStore.fetchAllUsers();
+const filteredRoleOptions = computed(() => {
+  if (!userToChangeRole.value) {
+    return allRoleOptions;
+  }
+
+  if (userToChangeRole.value.role === 'SUPER_ADMIN') {
+    return allRoleOptions.filter(option => option.value === 'SUPER_ADMIN');
+  }
+  return allRoleOptions;
+});
+
+
+onMounted(async () => {
+  try {
+    await userStore.fetchAllUsers();
+  } catch (error) {
+    console.error('Error al cargar usuarios en la UI:', error);
+    $q.notify({
+      type: 'negative',
+      message: 'No se pudieron cargar los usuarios. Revisa la conexión con el servidor.',
+    });
+  }
 });
 
 function goToCreateUser() {

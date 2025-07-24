@@ -126,8 +126,8 @@
           :exact="false"
           class="q-router-link--active-subtle"
         >
-          <q-item-section avatar><q-icon name="sym_o_manage_accounts" /></q-item-section>
-          <q-item-section>Gestión de Usuarios</q-item-section>
+          <q-item-section avatar><q-icon name="sym_o_manage_accounts" color="primary" /></q-item-section>
+          <q-item-section class="text-primary">Gestión de Usuarios</q-item-section>
         </q-item>
       </q-list>
     </q-drawer>
