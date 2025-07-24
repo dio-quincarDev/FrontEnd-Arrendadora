@@ -9,7 +9,7 @@ const API_CONSTANTS = {
   AUTH_ROUTE: '/auth',
   CUSTOMERS_ROUTE: '/customers',
   VEHICLES_ROUTE: '/vehicles',
-  REPORTS_ROUTE: '/reports',
+  REPORTS_ROUTE: '/v1/reports',
   LOGIN_ROUTE: '/login',
   RENTAL_ROUTE: '/rentals',
 }
