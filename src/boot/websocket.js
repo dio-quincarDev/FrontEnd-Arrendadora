@@ -1,16 +1,22 @@
-
 import { boot } from 'quasar/wrappers';
-import SockJS from 'sockjs-client';
-import Stomp from 'stompjs';
+import { Client } from '@stomp/stompjs';
+// import SockJS from 'sockjs-client'; // Ya no se importa
 import { useNotificationStore } from 'src/stores/notification.module';
 
 export default boot(({ app }) => {
-  const socket = new SockJS('http://localhost:8080/admin-alerts');
-  const stompClient = Stomp.over(socket);
+  const client = new Client({
+    brokerURL: 'ws://localhost:8080/admin-alerts', // Usar ws:// o wss:// para WebSockets nativos
+    // debug: function (str) {
+    //   console.log(str);
+    // },
+    reconnectDelay: 5000,
+    heartbeatIncoming: 4000,
+    heartbeatOutgoing: 4000,
+  });
 
-  stompClient.connect({}, frame => {
+  client.onConnect = function (frame) {
     console.log('Conectado: ' + frame);
-    stompClient.subscribe('/topic/rental-alerts', message => {
+    client.subscribe('/topic/rental-alerts', message => {
       console.log('Mensaje recibido: ' + message.body);
       const notificationStore = useNotificationStore();
       notificationStore.addNotification(message.body);
@@ -22,10 +28,12 @@ export default boot(({ app }) => {
         timeout: 3000
       });
     });
-  }, error => {
-    console.error('Error de conexión WebSocket:', error);
-  });
+  };
 
-  // Opcional: Hacer stompClient disponible globalmente o a través de Pinia
-  // app.config.globalProperties.$stompClient = stompClient;
+  client.onStompError = function (frame) {
+    console.error('Error de STOMP: ' + frame.headers['message']);
+    console.error('Detalles: ' + frame.body);
+  };
+
+  client.activate();
 });

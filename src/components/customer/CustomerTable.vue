@@ -32,111 +32,112 @@
         flat
         :grid="isMobile"
         :hide-header="isMobile"
-      />
-      <template v-slot:item="props">
-        <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-3 grid-item">
-          <q-card flat bordered>
-            <q-card-section class="text-center">
-              <div class="text-h6">{{ props.row.name }}</div>
-              <div class="text-subtitle2 text-grey-8">{{ props.row.email }}</div>
-            </q-card-section>
-            <q-separator />
-            <q-card-section class="flex flex-center">
+      >
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-3 grid-item">
+            <q-card flat bordered>
+              <q-card-section class="text-center">
+                <div class="text-h6">{{ props.row.name }}</div>
+                <div class="text-subtitle2 text-grey-8">{{ props.row.email }}</div>
+              </q-card-section>
+              <q-separator />
+              <q-card-section class="flex flex-center">
+                <q-list dense>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_badge" /></q-item-section>
+                    <q-item-section>Identificación: {{ props.row.license }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_phone" /></q-item-section>
+                    <q-item-section>Teléfono: {{ props.row.phone }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_verified_user" /></q-item-section>
+                    <q-item-section
+                      >Estado:
+                      {{
+                        props.row.customerStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'
+                      }}</q-item-section
+                    >
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_event" /></q-item-section>
+                    <q-item-section
+                      >Creado:
+                      {{ $q.date.formatDate(props.row.createdAt, 'DD/MM/YYYY') }}</q-item-section
+                    >
+                  </q-item>
+                </q-list>
+              </q-card-section>
+              <q-separator />
+              <q-card-actions align="right">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_info"
+                  color="info"
+                  @click="emitDetailsEvent(props.row)"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_edit"
+                  color="primary"
+                  @click="emitEditEvent(props.row)"
+                />
+                <q-btn
+                  v-if="isAdmin"
+                  flat
+                  round
+                  dense
+                  icon="sym_o_delete"
+                  color="negative"
+                  @click="confirmDelete(props.row)"
+                />
+              </q-card-actions>
+            </q-card>
+          </div>
+        </template>
+
+        <template v-slot:body-cell-actions="props">
+          <q-td :props="props">
+            <q-btn-dropdown flat round dense dropdown-icon="sym_o_more_vert" no-icon-animation>
               <q-list dense>
-                <q-item>
-                  <q-item-section avatar><q-icon name="sym_o_badge" /></q-item-section>
-                  <q-item-section>Identificación: {{ props.row.license }}</q-item-section>
+                <q-item clickable v-close-popup @click="emitDetailsEvent(props.row)">
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_info" color="info" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Ver Detalles</q-item-label>
+                  </q-item-section>
                 </q-item>
-                <q-item>
-                  <q-item-section avatar><q-icon name="sym_o_phone" /></q-item-section>
-                  <q-item-section>Teléfono: {{ props.row.phone }}</q-item-section>
+
+                <q-item clickable v-close-popup @click="emitEditEvent(props.row)">
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_edit" color="primary" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Editar</q-item-label>
+                  </q-item-section>
                 </q-item>
-                <q-item>
-                  <q-item-section avatar><q-icon name="sym_o_verified_user" /></q-item-section>
-                  <q-item-section
-                    >Estado:
-                    {{
-                      props.row.customerStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'
-                    }}</q-item-section
-                  >
-                </q-item>
-                <q-item>
-                  <q-item-section avatar><q-icon name="sym_o_event" /></q-item-section>
-                  <q-item-section
-                    >Creado:
-                    {{ $q.date.formatDate(props.row.createdAt, 'DD/MM/YYYY') }}</q-item-section
-                  >
+
+                <q-separator v-if="isAdmin" />
+
+                <q-item v-if="isAdmin" clickable v-close-popup @click="confirmDelete(props.row)">
+                  <q-item-section avatar>
+                    <q-icon name="sym_o_delete" color="negative" />
+                  </q-item-section>
+                  <q-item-section>
+                    <q-item-label>Eliminar (Admin)</q-item-label>
+                  </q-item-section>
                 </q-item>
               </q-list>
-            </q-card-section>
-            <q-separator />
-            <q-card-actions align="right">
-              <q-btn
-                flat
-                round
-                dense
-                icon="sym_o_info"
-                color="info"
-                @click="emitDetailsEvent(props.row)"
-              />
-              <q-btn
-                flat
-                round
-                dense
-                icon="sym_o_edit"
-                color="primary"
-                @click="emitEditEvent(props.row)"
-              />
-              <q-btn
-                v-if="isAdmin"
-                flat
-                round
-                dense
-                icon="sym_o_delete"
-                color="negative"
-                @click="confirmDelete(props.row)"
-              />
-            </q-card-actions>
-          </q-card>
-        </div>
-      </template>
-
-      <template v-slot:body-cell-actions="props">
-        <q-td :props="props">
-          <q-btn-dropdown flat round dense dropdown-icon="sym_o_more_vert" no-icon-animation>
-            <q-list dense>
-              <q-item clickable v-close-popup @click="emitDetailsEvent(props.row)">
-                <q-item-section avatar>
-                  <q-icon name="sym_o_info" color="info" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Ver Detalles</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-item clickable v-close-popup @click="emitEditEvent(props.row)">
-                <q-item-section avatar>
-                  <q-icon name="sym_o_edit" color="primary" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Editar</q-item-label>
-                </q-item-section>
-              </q-item>
-
-              <q-separator v-if="isAdmin" />
-
-              <q-item v-if="isAdmin" clickable v-close-popup @click="confirmDelete(props.row)">
-                <q-item-section avatar>
-                  <q-icon name="sym_o_delete" color="negative" />
-                </q-item-section>
-                <q-item-section>
-                  <q-item-label>Eliminar (Admin)</q-item-label>
-                </q-item-section>
-              </q-item>
-            </q-list>
-          </q-btn-dropdown>
-        </q-td>
-      </template>
+            </q-btn-dropdown>
+          </q-td>
+        </template>
+      </q-table>
     </q-card-section>
   </q-card>
 
@@ -246,7 +247,7 @@ export default {
       try {
         const decodedToken = jwtDecode(token)
         const userRole = decodedToken.role || ''
-        return userRole === 'ADMIN'
+        return userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
       } catch (error) {
         console.error('Error al decodificar el token:', error)
         return false

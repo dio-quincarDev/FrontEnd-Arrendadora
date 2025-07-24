@@ -124,7 +124,7 @@ const getStatusColor = (status) => {
   const statusColors = {
     PENDING: 'negative',
     ACTIVE: 'positive',
-    COMPLETED: 'primary',
+    COMPLETED: 'info',
     CANCELLED: 'negative',
   }
   return statusColors[status] || 'grey'

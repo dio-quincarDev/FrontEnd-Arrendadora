@@ -252,7 +252,7 @@ export default {
       try {
         const decodedToken = jwtDecode(token)
         const userRole = decodedToken.role || ''
-        return userRole === 'ADMIN'
+        return userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
       } catch (error) {
         console.error('Error al decodificar el token:', error)
         return false

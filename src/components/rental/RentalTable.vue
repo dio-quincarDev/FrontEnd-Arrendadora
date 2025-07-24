@@ -336,7 +336,7 @@ const isAdmin = computed(() => {
   try {
     const decodedToken = jwtDecode(token)
     const userRole = decodedToken.role || ''
-    return userRole === 'ADMIN'
+    return userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
   } catch (error) {
     console.error('Error al decodificar el token:', error)
     return false
@@ -362,7 +362,7 @@ const getStatusColor = (status) => {
   const statusColors = {
     PENDING: 'negative',
     ACTIVE: 'positive',
-    COMPLETED: 'primary',
+    COMPLETED: 'info',
     CANCELLED: 'negative',
   }
   return statusColors[status] || 'grey'
