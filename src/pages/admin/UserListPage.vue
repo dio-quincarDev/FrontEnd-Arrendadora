@@ -98,19 +98,11 @@ const showRoleDialog = ref(false)
 const userToChangeRole = ref(null)
 const selectedRole = ref(null)
 const allRoleOptions = [
-  { label: 'Usuario', value: 'USER' },
+  { label: 'Usuario', value: 'USERS' },
   { label: 'Administrador', value: 'ADMIN' },
-  { label: 'Super Administrador', value: 'SUPER_ADMIN' },
 ]
 
 const filteredRoleOptions = computed(() => {
-  if (!userToChangeRole.value) {
-    return allRoleOptions
-  }
-
-  if (userToChangeRole.value.role === 'SUPER_ADMIN') {
-    return allRoleOptions.filter((option) => option.value === 'SUPER_ADMIN')
-  }
   return allRoleOptions
 })
 

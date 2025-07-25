@@ -22,7 +22,7 @@ class UserService {
   }
 
   updateUserRole(id, role) {
-    return api.put(`/v1/users/${id}/role`, { role })
+    return api.put(`/v1/users/${id}/role?newRole=${role}`)
   }
 }
 

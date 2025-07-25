@@ -86,11 +86,8 @@ export const useUserStore = defineStore('user', {
       this.error = null;
       try {
         const response = await UserService.updateUserRole(id, role);
-        // Update the user's role in the local state
-        const userIndex = this.users.findIndex(user => user.id === id);
-        if (userIndex !== -1) {
-          this.users[userIndex].role = role; // Assuming the response contains the updated user or just success
-        }
+        // After successful update, re-fetch all users to ensure UI is in sync
+        await this.fetchAllUsers();
         return response.data;
       } catch (error) {
         this.error = error;

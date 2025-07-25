@@ -11,6 +11,7 @@
             filled
             v-model="userStore.currentUser.username"
             label="Nombre de Usuario *"
+            type="username"
             lazy-rules
             :rules="[(val) => (val && val.length > 0) || 'Por favor, ingresa un nombre de usuario']"
           />
@@ -78,7 +79,7 @@ const $q = useQuasar()
 const userId = ref(null)
 
 const roleOptions = [
-  { label: 'Usuario', value: 'USER' },
+  { label: 'Usuario', value: 'USERS' },
   { label: 'Administrador', value: 'ADMIN' },
   { label: 'Super Administrador', value: 'SUPER_ADMIN' },
 ]

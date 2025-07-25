@@ -11,6 +11,7 @@
             filled
             v-model="user.username"
             label="Nombre de Usuario *"
+            type="username"
             lazy-rules
             :rules="[(val) => (val && val.length > 0) || 'Por favor, ingresa un nombre de usuario']"
           />
@@ -83,11 +84,11 @@ const user = ref({
   username: '',
   email: '',
   password: '',
-  role: 'USER', // Default role
+  role: 'USERS', // Default role
 })
 
 const roleOptions = [
-  { label: 'Usuario', value: 'USER' },
+  { label: 'Usuario', value: 'USERS' },
   { label: 'Administrador', value: 'ADMIN' },
   { label: 'Super Administrador', value: 'SUPER_ADMIN' },
 ]
