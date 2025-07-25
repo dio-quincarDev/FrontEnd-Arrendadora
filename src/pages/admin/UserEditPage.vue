@@ -81,7 +81,6 @@ const userId = ref(null)
 const roleOptions = [
   { label: 'Usuario', value: 'USERS' },
   { label: 'Administrador', value: 'ADMIN' },
-  { label: 'Super Administrador', value: 'SUPER_ADMIN' },
 ]
 
 onMounted(() => {
