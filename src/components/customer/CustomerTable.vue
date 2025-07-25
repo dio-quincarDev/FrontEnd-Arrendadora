@@ -64,8 +64,8 @@
                     <q-item-section avatar><q-icon name="sym_o_event" /></q-item-section>
                     <q-item-section
                       >Creado:
-                      {{ $q.date.formatDate(props.row.createdAt, 'DD/MM/YYYY') }}</q-item-section
-                    >
+                      {{ formatDate(props.row.createdAt) }}
+                    </q-item-section>
                   </q-item>
                 </q-list>
               </q-card-section>
@@ -273,6 +273,7 @@ export default {
         this.loading = false
       }
     },
+
     emitEditEvent(customer) {
       this.$emit('edit-customer', customer)
     },
@@ -282,6 +283,9 @@ export default {
     confirmDelete(customer) {
       this.customerToDelete = customer
       this.showDialog = true
+    },
+    formatDate(value) {
+      return date.formatDate(value, 'DD/MM/YYYY')
     },
     async deleteCustomer() {
       this.loading = true
