@@ -119,7 +119,7 @@
 
         <!-- Nuevo elemento de menú para Gestión de Usuarios -->
         <q-item
-          v-if="authStore.user && authStore.user.role === 'SUPER_ADMIN'"
+          v-if="isSuperAdmin"
           to="/admin/users"
           clickable
           v-ripple
@@ -139,23 +139,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useNotificationStore } from 'src/stores/notification.module'
-import { useAuthStore } from 'src/stores/auth.module' // Importar el store de autenticación
+import AuthService from 'src/services/auth.service'
 
 const leftDrawerOpen = ref(false)
 const router = useRouter()
 const notificationStore = useNotificationStore()
-const authStore = useAuthStore() // Usar el store de autenticación
+
+const isSuperAdmin = computed(() => {
+  const roles = AuthService.getUserRoles()
+  return roles.includes('SUPER_ADMIN')
+})
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 
 function logout() {
-  localStorage.removeItem('authToken')
-  // Aquí podrías añadir una notificación de éxito con QNotify
+  AuthService.logout()
   router.push('/auth/login')
 }
 </script>

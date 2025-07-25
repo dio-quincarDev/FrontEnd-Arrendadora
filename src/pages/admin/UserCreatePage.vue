@@ -48,8 +48,20 @@
           />
 
           <div>
-            <q-btn label="Crear Usuario" type="submit" color="primary" :loading="userStore.loading" />
-            <q-btn label="Cancelar" type="reset" color="negative" flat class="q-ml-sm" @click="router.back()" />
+            <q-btn
+              label="Crear Usuario"
+              type="submit"
+              color="accent"
+              :loading="userStore.loading"
+            />
+            <q-btn
+              label="Cancelar"
+              type="reset"
+              color="negative"
+              flat
+              class="q-ml-sm"
+              @click="router.back()"
+            />
           </div>
         </q-form>
       </q-card-section>
@@ -58,42 +70,42 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useQuasar } from 'quasar';
-import { useUserStore } from 'src/stores/user.module';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useQuasar } from 'quasar'
+import { useUserStore } from 'src/stores/user.module'
 
-const userStore = useUserStore();
-const router = useRouter();
-const $q = useQuasar();
+const userStore = useUserStore()
+const router = useRouter()
+const $q = useQuasar()
 
 const user = ref({
   username: '',
   email: '',
   password: '',
   role: 'USER', // Default role
-});
+})
 
 const roleOptions = [
   { label: 'Usuario', value: 'USER' },
   { label: 'Administrador', value: 'ADMIN' },
   { label: 'Super Administrador', value: 'SUPER_ADMIN' },
-];
+]
 
 async function onSubmit() {
   try {
-    await userStore.createUser(user.value);
+    await userStore.createUser(user.value)
     $q.notify({
       type: 'positive',
       message: 'Usuario creado exitosamente.',
-    });
-    router.push('/admin/users');
+    })
+    router.push('/admin/users')
   } catch (error) {
     $q.notify({
       type: 'negative',
       message: 'Error al crear usuario.',
-    });
-    console.error('Error al crear usuario:', error);
+    })
+    console.error('Error al crear usuario:', error)
   }
 }
 </script>
