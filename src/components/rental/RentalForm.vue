@@ -67,7 +67,7 @@
         </q-select>
 
         <div class="row q-col-gutter-md q-mb-md">
-          <div class="col-12 col-sm-6">
+          <div class="col-12 col-md-6">
             <q-input
               v-model="formData.startDate"
               label="Fecha de Inicio *"
@@ -90,7 +90,7 @@
               </template>
             </q-input>
           </div>
-          <div class="col-12 col-sm-6">
+          <div class="col-12 col-md-6">
             <q-input
               v-model="formData.endDate"
               label="Fecha de Fin *"
@@ -116,7 +116,7 @@
         </div>
 
         <div class="row q-col-gutter-md q-mb-md">
-          <div class="col-12 col-sm-6">
+          <div class="col-12 col-md-6">
             <q-input
               v-model="formData.startTime"
               label="Hora Inicio *"
@@ -134,18 +134,14 @@
               </template>
             </q-input>
           </div>
-
-          <div class="col-12 col-sm-6">
+          <div class="col-12 col-md-6">
             <q-input
               v-model="formData.endTime"
               label="Hora Fin *"
               outlined
               dense
               mask="##:##"
-              :rules="[
-                (val) => !!val || 'Por favor, selecciona la hora de fin',
-                validateEndTime,
-              ]"
+              :rules="[(val) => !!val || 'Por favor, selecciona la hora de fin']"
             >
               <template v-slot:append>
                 <q-icon name="sym_o_access_time" class="cursor-pointer">
@@ -248,7 +244,7 @@ import RentalService from 'src/services/rental.service'
 import VehicleService from 'src/services/vehicle.service'
 import CustomerService from 'src/services/customer.service'
 
-import { useRentalCalculations } from 'src/composables/useRentalCalculations';
+import { useRentalCalculations } from 'src/composables/useRentalCalculations'
 
 const props = defineProps({
   rentalToEdit: {
@@ -325,8 +321,7 @@ const selectedPricingInfo = computed(() => {
   return availablePricingTiers.value.find((p) => p.value === formData.value.chosenPricingTier)
 })
 
-const { rentalDuration, totalPrice } = useRentalCalculations(formData, selectedPricingInfo);
-
+const { rentalDuration, totalPrice } = useRentalCalculations(formData, selectedPricingInfo)
 
 // MÉTODOS DE CARGA
 onMounted(async () => {
@@ -338,10 +333,18 @@ async function loadVehicles() {
   try {
     const res = await VehicleService.getVehicles()
     const allVehicles = Array.isArray(res) ? res : []
-    const availableVehicles = allVehicles.filter((v) => v.status === 'AVAILABLE')
+    let vehiclesToDisplay = []
 
-    vehicles.value = availableVehicles.map((v) => {
-      console.log(`Vehículo ${v.id}: Tipo original -> ${v.vehicleType}`); // DEBUGGING: Usando vehicleType
+    if (isEditMode.value && props.rentalToEdit) {
+      // En modo edición, incluir todos los vehículos para asegurar que el vehículo de la renta editada esté presente
+      vehiclesToDisplay = allVehicles
+    } else {
+      // En modo creación, solo mostrar vehículos disponibles
+      vehiclesToDisplay = allVehicles.filter((v) => v.status === 'AVAILABLE')
+    }
+
+    vehicles.value = vehiclesToDisplay.map((v) => {
+      console.log(`Vehículo ${v.id}: Tipo original -> ${v.vehicleType}`) // DEBUGGING: Usando vehicleType
       return {
         label: `${v.brand} ${v.model} (${v.year})`,
         value: v.id,
@@ -364,21 +367,39 @@ async function loadCustomers() {
     const customersData = await CustomerService.getCustomers()
     const rentalsResponse = await RentalService.getRentals()
     const allRentals = Array.isArray(rentalsResponse.data) ? rentalsResponse.data : []
-    const activeCustomerIds = new Set(
-      allRentals
-        .filter((rental) => rental.rentalStatus === 'ACTIVE')
-        .map((rental) => rental.customerId),
-    )
+    
 
     if (Array.isArray(customersData)) {
-      const availableCustomers = customersData.filter(
-        (customer) => !activeCustomerIds.has(customer.id),
-      )
-      customers.value = availableCustomers.map((c) => ({
-        label: `${c.name}`,
-        value: c.id,
-        description: `Licencia: ${c.license} - Tel: ${c.phone}`,
-      }))
+      if (!isEditMode.value) {
+        // En modo creación, filtrar clientes con rentas activas
+        const activeCustomerIds = new Set(
+          allRentals
+            .filter((rental) => rental.rentalStatus === 'ACTIVE')
+            .map((rental) => rental.customerId)
+        );
+        customers.value = customersData
+          .filter((customer) => !activeCustomerIds.has(customer.id))
+          .map((c) => ({
+            label: `${c.name}`,
+            value: c.id,
+            description: `Licencia: ${c.license} - Tel: ${c.phone}`,
+          }));
+      } else {
+        // En modo edición, asegurar que el cliente de la renta actual no sea filtrado.
+        // Se filtran otros clientes con rentas activas, pero se excluye la renta actual del filtro.
+        const activeCustomerIds = new Set(
+          allRentals
+            .filter((rental) => rental.rentalStatus === 'ACTIVE' && rental.id !== props.rentalToEdit?.id)
+            .map((rental) => rental.customerId)
+        );
+        customers.value = customersData
+          .filter((customer) => !activeCustomerIds.has(customer.id))
+          .map((c) => ({
+            label: `${c.name}`,
+            value: c.id,
+            description: `Licencia: ${c.license} - Tel: ${c.phone}`,
+          }));
+      }
     } else {
       console.error('La respuesta de clientes no contiene un array válido:', customersData)
       customers.value = []
@@ -400,12 +421,18 @@ async function onVehicleChange(vehicleId) {
     return
   }
 
+  if (!vehicles.value.length) {
+    console.warn('🚨 Lista de vehículos vacía al intentar seleccionar vehículo')
+    return
+  }
+
   loadingPricingTiers.value = true
 
   try {
-    const selectedVehicle = vehicles.value.find((v) => v.value === vehicleId)
+    const selectedVehicle = vehicles.value.find((v) => String(v.value) === String(vehicleId))
     if (!selectedVehicle) {
-      throw new Error('Vehículo no encontrado')
+      console.error(`Vehículo con ID ${vehicleId} no encontrado en la lista de vehículos.`)
+      return // Añadir esta línea para salir de la función si no se encuentra el vehículo
     }
 
     const vehicleType = selectedVehicle.type?.toUpperCase().trim() || 'DEFAULT'
@@ -492,10 +519,8 @@ watch(
 
       formData.value = {
         ...newRental,
-        dateRange: {
-          from: date.formatDate(parsedStartDate, 'YYYY-MM-DD'),
-          to: date.formatDate(parsedEndDate, 'YYYY-MM-DD'),
-        },
+        startDate: date.formatDate(parsedStartDate, 'YYYY-MM-DD'),
+        endDate: date.formatDate(parsedEndDate, 'YYYY-MM-DD'),
         startTime: date.formatDate(parsedStartDate, 'HH:mm'),
         endTime: date.formatDate(parsedEndDate, 'HH:mm'),
         chosenPricingTier: newRental.chosenPricingTier || null,
@@ -509,10 +534,8 @@ watch(
       formData.value = {
         vehicleId: null,
         customerId: null,
-        dateRange: {
-          from: date.formatDate(new Date(), 'YYYY-MM-DD'),
-          to: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
-        },
+        startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
+        endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
         startTime: '08:00',
         endTime: '08:00',
         rentalStatus: 'ACTIVE',
@@ -525,21 +548,20 @@ watch(
 )
 
 const disablePastDates = (d) => {
-  const today = date.formatDate(new Date(), 'YYYY/MM/DD')
-  return d >= today
+  return d >= date.formatDate(new Date(), 'YYYY/MM/DD')
 }
 
-const validateEndTime = (val) => {
-  if (!val || !formData.value.startTime || !formData.value.dateRange.from || !formData.value.dateRange.to) {
-    return true
-  }
-  if (formData.value.dateRange.from === formData.value.dateRange.to) {
-    if (val < formData.value.startTime) {
-      return 'La hora de fin no puede ser anterior a la de inicio en el mismo día.'
+
+
+watch(
+  [vehicles, () => props.rentalToEdit],
+  ([newVehicles, newRental]) => {
+    if (newVehicles.length > 0 && isEditMode.value && newRental?.vehicleId) {
+      onVehicleChange(newRental.vehicleId)
     }
-  }
-  return true
-}
+  },
+  { immediate: true }
+)
 
 watch(
   () => formData.value.startDate,
@@ -550,7 +572,6 @@ watch(
   },
 )
 
-
 async function submitForm() {
   const isValid = await rentalFormRef.value.validate()
   if (!isValid) {
@@ -558,8 +579,8 @@ async function submitForm() {
     return
   }
 
-  const fullStartDate = `${formData.value.dateRange.from} ${formData.value.startTime}:00`
-  const fullEndDate = `${formData.value.dateRange.to} ${formData.value.endTime}:00`
+  const fullStartDate = `${formData.value.startDate} ${formData.value.startTime}:00`
+  const fullEndDate = `${formData.value.endDate} ${formData.value.endTime}:00`
 
   if (new Date(fullEndDate) < new Date(fullStartDate)) {
     $q.notify({
