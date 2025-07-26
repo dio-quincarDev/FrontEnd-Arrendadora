@@ -5,7 +5,7 @@
 [![Axios](https://img.shields.io/badge/Axios-v1.x-5A29E4?logo=axios&logoColor=white)](https://axios-http.com/)
 [![JavaScript](https://img.shields.io/badge/JavaScript-ES6+-F7DF1E?logo=javascript&logoColor=black)](https://developer.mozilla.org/en-US/docs/Web/JavaScript)
 
-Este repositorio contiene el código fuente del frontend para la aplicación de gestión de alquiler de vehículos "Arrendadora Alberto Junior". Desarrollado con **Vue.js 3** y **Quasar Framework**, ofrece una interfaz de usuario moderna, responsiva e intuitiva para la administración eficiente de operaciones de alquiler.
+Este repositorio contiene el código fuente del frontend para la aplicación de gestión de alquiler de vehículos "Arrendadora". Desarrollado con **Vue.js 3** y **Quasar Framework**, ofrece una interfaz de usuario moderna, responsiva e intuitiva para la administración eficiente de operaciones de alquiler.
 
 ## 🚀 Tecnologías Clave
 
@@ -16,6 +16,9 @@ Este proyecto está construido sobre una pila de tecnologías robusta y moderna:
 *   **Axios:** Cliente HTTP basado en promesas para realizar peticiones eficientes y simplificadas al backend.
 *   **Vue Router:** El enrutador oficial para Vue.js, esencial para la navegación declarativa y dinámica entre las vistas de la aplicación.
 *   **Pinia:** El store de estado intuitivo y ligero para Vue.js, utilizado para la gestión centralizada del estado de la aplicación.
+*   **WebSockets (@stomp/stompjs):** Para comunicación en tiempo real con el backend.
+*   **jwt-decode:** Para decodificar tokens JWT en el frontend.
+*   **date-fns:** Una librería moderna para manipulación de fechas en JavaScript.
 *   **JavaScript (ES6+):** El lenguaje de programación principal, utilizando las últimas características para un código más limpio y eficiente.
 *   **npm / Yarn:** Administradores de paquetes utilizados para la gestión de dependencias del proyecto.
 
