@@ -84,6 +84,7 @@
                       mask="YYYY-MM-DD"
                       color="accent"
                       :options="disablePastDates"
+                      v-close-popup
                     />
                   </q-popup-proxy>
                 </q-icon>
@@ -107,6 +108,7 @@
                       mask="YYYY-MM-DD"
                       color="accent"
                       :options="disableStartDate"
+                      v-close-popup
                     />
                   </q-popup-proxy>
                 </q-icon>
