@@ -67,19 +67,47 @@
         </q-select>
 
         <div class="row q-col-gutter-md q-mb-md">
-          <div class="col-12">
+          <div class="col-12 col-sm-6">
             <q-input
-              v-model="formattedDateRange"
-              label="Fechas de Renta *"
+              v-model="formData.startDate"
+              label="Fecha de Inicio *"
               outlined
               dense
               readonly
-              :rules="[(val) => !!val || 'Por favor, selecciona las fechas de renta']"
+              :rules="[(val) => !!val || 'Por favor, selecciona la fecha de inicio']"
             >
               <template v-slot:append>
                 <q-icon name="sym_o_event" class="cursor-pointer">
                   <q-popup-proxy cover transition-show="scale" transition-hide="scale">
-                    <q-date v-model="formData.dateRange" range mask="YYYY-MM-DD" color="accent" />
+                    <q-date
+                      v-model="formData.startDate"
+                      mask="YYYY-MM-DD"
+                      color="accent"
+                      :options="disablePastDates"
+                    />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+          <div class="col-12 col-sm-6">
+            <q-input
+              v-model="formData.endDate"
+              label="Fecha de Fin *"
+              outlined
+              dense
+              readonly
+              :rules="[(val) => !!val || 'Por favor, selecciona la fecha de fin']"
+            >
+              <template v-slot:append>
+                <q-icon name="sym_o_event" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-date
+                      v-model="formData.endDate"
+                      mask="YYYY-MM-DD"
+                      color="accent"
+                      :options="disableStartDate"
+                    />
                   </q-popup-proxy>
                 </q-icon>
               </template>
@@ -114,7 +142,10 @@
               outlined
               dense
               mask="##:##"
-              :rules="[(val) => !!val || 'Por favor, selecciona la hora de fin']"
+              :rules="[
+                (val) => !!val || 'Por favor, selecciona la hora de fin',
+                validateEndTime,
+              ]"
             >
               <template v-slot:append>
                 <q-icon name="sym_o_access_time" class="cursor-pointer">
@@ -217,6 +248,8 @@ import RentalService from 'src/services/rental.service'
 import VehicleService from 'src/services/vehicle.service'
 import CustomerService from 'src/services/customer.service'
 
+import { useRentalCalculations } from 'src/composables/useRentalCalculations';
+
 const props = defineProps({
   rentalToEdit: {
     type: Object,
@@ -238,15 +271,17 @@ const loadingPricingTiers = ref(false)
 const formData = ref({
   vehicleId: null,
   customerId: null,
-  dateRange: {
-    from: date.formatDate(new Date(), 'YYYY-MM-DD'),
-    to: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
-  },
+  startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
+  endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
   startTime: '08:00',
   endTime: '08:00',
   rentalStatus: 'ACTIVE',
   chosenPricingTier: null,
 })
+
+const disableStartDate = (d) => {
+  return d >= formData.value.startDate.replace(/-/g, '/')
+}
 
 const vehicles = ref([])
 const customers = ref([])
@@ -290,45 +325,8 @@ const selectedPricingInfo = computed(() => {
   return availablePricingTiers.value.find((p) => p.value === formData.value.chosenPricingTier)
 })
 
-const formattedDateRange = computed(() => {
-  if (
-    !formData.value.dateRange ||
-    (!formData.value.dateRange.from && !formData.value.dateRange.to)
-  ) {
-    return ''
-  }
-  const from = formData.value.dateRange.from
-  const to = formData.value.dateRange.to
+const { rentalDuration, totalPrice } = useRentalCalculations(formData, selectedPricingInfo);
 
-  if (from && to) {
-    return `${date.formatDate(from, 'DD/MM/YYYY')} - ${date.formatDate(to, 'DD/MM/YYYY')}`
-  } else if (from) {
-    return date.formatDate(from, 'DD/MM/YYYY')
-  } else if (to) {
-    return date.formatDate(to, 'DD/MM/YYYY')
-  }
-  return ''
-})
-
-const rentalDuration = computed(() => {
-  if (!formData.value.dateRange || !formData.value.dateRange.from || !formData.value.dateRange.to)
-    return 0
-
-  const startDateTime = new Date(`${formData.value.dateRange.from} ${formData.value.startTime}`)
-  const endDateTime = new Date(`${formData.value.dateRange.to} ${formData.value.endTime}`)
-
-  if (endDateTime < startDateTime) return 0 // Evitar duraciones negativas
-
-  const diffTime = Math.abs(endDateTime.getTime() - startDateTime.getTime())
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-
-  return diffDays || 1 // Mínimo 1 día
-})
-
-const totalPrice = computed(() => {
-  if (!selectedPricingInfo.value) return 0
-  return selectedPricingInfo.value.price * rentalDuration.value
-})
 
 // MÉTODOS DE CARGA
 onMounted(async () => {
@@ -526,23 +524,32 @@ watch(
   { immediate: true },
 )
 
-// Eliminar updateEndDate ya no es necesario con el rango de fechas
-// function updateEndDate() {
-//   if (formData.value.startDate) {
-//     const startDay = date.extractDate(formData.value.startDate, 'YYYY-MM-DD')
-//     const endDay = date.extractDate(formData.value.endDate, 'YYYY-MM-DD')
+const disablePastDates = (d) => {
+  const today = date.formatDate(new Date(), 'YYYY/MM/DD')
+  return d >= today
+}
 
-//     if (date.isBefore(endDay, startDay, 'day')) {
-//       formData.value.endDate = formData.value.startDate
-//       formData.value.endTime = formData.value.startTime
-//     } else if (date.isSame(endDay, startDay, 'day')) {
-//       if (formData.value.endTime < formData.value.startTime) {
-//         formData.value.endTime = formData.value.startTime
-//       }
-//     }
-//   }
-//   rentalFormRef.value?.validate('endDate')
-// }
+const validateEndTime = (val) => {
+  if (!val || !formData.value.startTime || !formData.value.dateRange.from || !formData.value.dateRange.to) {
+    return true
+  }
+  if (formData.value.dateRange.from === formData.value.dateRange.to) {
+    if (val < formData.value.startTime) {
+      return 'La hora de fin no puede ser anterior a la de inicio en el mismo día.'
+    }
+  }
+  return true
+}
+
+watch(
+  () => formData.value.startDate,
+  (newDate) => {
+    if (formData.value.endDate < newDate) {
+      formData.value.endDate = newDate
+    }
+  },
+)
+
 
 async function submitForm() {
   const isValid = await rentalFormRef.value.validate()
