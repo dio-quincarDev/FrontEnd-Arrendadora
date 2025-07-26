@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="row q-col-gutter-lg">
+    <div class="row q-col-gutter-md">
       <!-- Filtros -->
       <div class="col-12">
         <metric-filter @update-filters="handleUpdateFilters" :loading="loading" />

@@ -1,47 +1,136 @@
 <template>
   <q-page padding>
     <q-card>
-      <q-card-section class="row items-center justify-between">
+      <q-card-section
+        class="row items-center justify-between q-gutter-sm q-pb-none q-px-md-lg q-pt-md-lg wrap"
+      >
         <div class="text-h6">Gestión de Usuarios</div>
+        <q-space />
+        <q-input
+          dense
+          outlined
+          v-model="search"
+          placeholder="Buscar usuario..."
+          class="q-mr-md"
+          :style="$q.screen.lt.sm ? 'width: 100%' : 'min-width: 200px'"
+        >
+          <template v-slot:append>
+            <q-icon name="sym_o_search" />
+          </template>
+        </q-input>
         <q-btn color="accent" label="Crear Usuario" @click="goToCreateUser" />
       </q-card-section>
 
-      <q-card-section>
+      <q-card-section class="q-pa-none q-px-md-lg">
         <q-table
-          :rows="userStore.users"
+          :rows="filteredUsers"
           :columns="columns"
           row-key="id"
           :loading="userStore.loading"
           no-data-label="No hay usuarios disponibles"
+          grid
+          hide-header
+          :card-container-class="$q.screen.lt.sm ? 'q-col-gutter-md' : ''"
         >
+          <q-inner-loading :showing="userStore.loading">
+            <q-spinner-gears size="50px" color="primary" />
+          </q-inner-loading>
+          <template v-slot:item="props">
+            <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-3 grid-style-transition">
+              <q-card class="q-py-sm">
+                <q-list dense>
+                  <q-item
+                    v-for="col in props.cols.filter((col) => col.name !== 'actions')"
+                    :key="col.name"
+                    style="min-height: 45px;"
+                  >
+                    <q-item-section>
+                      <q-item-label>{{ col.label }}</q-item-label>
+                    </q-item-section>
+                    <q-item-section side>
+                      <q-item-label caption class="text-no-wrap ellipsis">{{ col.value }}</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                  <q-card-actions align="right">
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="sym_o_edit"
+                      color="primary"
+                      @click="editUser(props.row.id)"
+                    >
+                      <q-tooltip>Editar Usuario</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="sym_o_delete"
+                      color="negative"
+                      @click="confirmDelete(props.row.id)"
+                      :disable="props.row.role === 'SUPER_ADMIN' || props.row.id === currentUserId"
+                    >
+                      <q-tooltip>Eliminar Usuario</q-tooltip>
+                    </q-btn>
+                    <q-btn
+                      flat
+                      round
+                      dense
+                      icon="sym_o_manage_accounts"
+                      color="accent"
+                      @click="changeRole(props.row)"
+                      :disable="props.row.role === 'SUPER_ADMIN' || props.row.id === currentUserId"
+                    >
+                      <q-tooltip>Cambiar Rol</q-tooltip>
+                    </q-btn>
+                  </q-card-actions>
+                </q-list>
+              </q-card>
+            </div>
+          </template>
           <template v-slot:body-cell-actions="props">
             <q-td :props="props">
-              <q-btn
-                flat
-                round
-                icon="sym_o_edit"
-                color="primary"
-                size="sm"
-                @click="editUser(props.row.id)"
-              />
-              <q-btn
-                flat
-                round
-                icon="sym_o_delete"
-                color="negative"
-                size="sm"
-                @click="confirmDelete(props.row.id)"
-                :disable="props.row.role === 'SUPER_ADMIN' || props.row.id === currentUserId"
-              />
-              <q-btn
-                flat
-                round
-                icon="sym_o_manage_accounts"
-                color="accent"
-                size="sm"
-                @click="changeRole(props.row)"
-                :disable="props.row.role === 'SUPER_ADMIN' || props.row.id === currentUserId"
-              />
+              <q-btn-dropdown flat round dense dropdown-icon="sym_o_more_vert" no-icon-animation>
+                <q-list dense>
+                  <q-item clickable v-close-popup @click="editUser(props.row.id)">
+                    <q-item-section avatar>
+                      <q-icon name="sym_o_edit" color="primary" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>Editar</q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item
+                    clickable
+                    v-close-popup
+                    @click="confirmDelete(props.row.id)"
+                    :disable="props.row.role === 'SUPER_ADMIN' || props.row.id === currentUserId"
+                  >
+                    <q-item-section avatar>
+                      <q-icon name="sym_o_delete" color="negative" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>Eliminar</q-item-label>
+                    </q-item-section>
+                  </q-item>
+
+                  <q-item
+                    clickable
+                    v-close-popup
+                    @click="changeRole(props.row)"
+                    :disable="props.row.role === 'SUPER_ADMIN' || props.row.id === currentUserId"
+                  >
+                    <q-item-section avatar>
+                      <q-icon name="sym_o_manage_accounts" color="accent" />
+                    </q-item-section>
+                    <q-item-section>
+                      <q-item-label>Cambiar Rol</q-item-label>
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-btn-dropdown>
             </q-td>
           </template>
         </q-table>
@@ -86,12 +175,25 @@ const $q = useQuasar()
 
 const currentUserId = AuthService.getCurrentUserId()
 
+const search = ref('') // Nuevo ref para el término de búsqueda
+
+const filteredUsers = computed(() => {
+  if (!search.value) {
+    return userStore.users
+  }
+  const searchTerm = search.value.toLowerCase()
+  return userStore.users.filter(
+    (user) =>
+      user.username.toLowerCase().includes(searchTerm) ||
+      user.email.toLowerCase().includes(searchTerm),
+  )
+})
+
 const columns = [
-  { name: 'id', label: 'ID', align: 'left', field: 'id' },
   { name: 'username', label: 'Nombre de Usuario', align: 'left', field: 'username' },
   { name: 'email', label: 'Email', align: 'left', field: 'email' },
   { name: 'role', label: 'Rol', align: 'left', field: 'role' },
-  { name: 'actions', label: 'Acciones', align: 'center', field: 'actions' },
+  { name: 'actions', label: 'Acciones', align: 'center', field: 'actions', style: 'min-width: 100px' },
 ]
 
 const showRoleDialog = ref(false)

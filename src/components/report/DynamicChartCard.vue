@@ -108,16 +108,16 @@ const chartOptions = computed(() => {
         right: isMobile ? 'auto' : '5%',
         top: isMobile ? 'bottom' : 'center', // Abajo en móvil
         textStyle: {
-          fontSize: 10, // Un poco más pequeño para móvil
+          fontSize: isMobile ? 9 : 12, // Un poco más pequeño para móvil
           color: '#555',
         },
-        itemGap: 8, // Menos espacio entre items en móvil
+        itemGap: isMobile ? 5 : 10, // Menos espacio entre items en móvil
       },
       series: props.chartData.datasets.map((ds) => ({
         name: ds.label,
         type: 'pie',
-        radius: ['40%', '70%'],
-        center: isMobile ? ['50%', '45%'] : ['40%', '50%'], // Subir un poco el gráfico en móvil
+        radius: isMobile ? ['30%', '55%'] : ['40%', '70%'], // Reducir radio en móvil
+        center: isMobile ? ['50%', '40%'] : ['40%', '50%'], // Subir un poco más el gráfico en móvil
         data: props.chartData.labels.map((label, i) => ({
           name: label,
           value: ds.data[i],
