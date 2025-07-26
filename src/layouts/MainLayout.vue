@@ -6,6 +6,42 @@
 
         <q-toolbar-title class="app-title"> Arrendadora Alberto Junior </q-toolbar-title>
 
+        <!-- Botón de Notificaciones -->
+        <q-btn flat dense round icon="sym_o_notifications">
+          <q-badge color="red" floating v-if="notificationStore.unreadCount > 0">{{ notificationStore.unreadCount }}</q-badge>
+          <q-menu>
+            <q-list style="min-width: 300px">
+              <q-item-label header>Notificaciones</q-item-label>
+              <q-item v-if="notificationStore.notifications.length === 0">
+                <q-item-section>No hay notificaciones.</q-item-section>
+              </q-item>
+              <q-item
+                v-for="notification in notificationStore.notifications"
+                :key="notification.id"
+                clickable
+                v-ripple
+                @click="notificationStore.markAsRead(notification.id)"
+                :class="{ 'bg-blue-1': !notification.read }"
+              >
+                <q-item-section>
+                  <q-item-label>{{ notification.message }}</q-item-label>
+                  <q-item-label caption>{{ notification.timestamp }}</q-item-label>
+                </q-item-section>
+                <q-item-section side v-if="!notification.read">
+                  <q-icon name="fiber_manual_record" color="blue" size="8px" />
+                </q-item-section>
+              </q-item>
+              <q-separator />
+              <q-item v-if="notificationStore.notifications.length > 0">
+                <q-item-section class="text-center">
+                  <q-btn flat dense label="Marcar todas como leídas" @click="notificationStore.markAllAsRead" />
+                  <q-btn flat dense label="Limpiar notificaciones" @click="notificationStore.clearNotifications" />
+                </q-item-section>
+              </q-item>
+            </q-list>
+          </q-menu>
+        </q-btn>
+
         <q-btn
           flat
           dense
@@ -80,6 +116,19 @@
           <q-item-section avatar><q-icon name="sym_o_people" /></q-item-section>
           <q-item-section>Clientes</q-item-section>
         </q-item>
+
+        <!-- Nuevo elemento de menú para Gestión de Usuarios -->
+        <q-item
+          v-if="isSuperAdmin"
+          to="/admin/users"
+          clickable
+          v-ripple
+          :exact="false"
+          class="q-router-link--active-subtle"
+        >
+          <q-item-section avatar><q-icon name="sym_o_manage_accounts" color="primary" /></q-item-section>
+          <q-item-section class="text-primary">Gestión de Usuarios</q-item-section>
+        </q-item>
       </q-list>
     </q-drawer>
 
@@ -90,19 +139,26 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useNotificationStore } from 'src/stores/notification.module'
+import AuthService from 'src/services/auth.service'
 
 const leftDrawerOpen = ref(false)
 const router = useRouter()
+const notificationStore = useNotificationStore()
+
+const isSuperAdmin = computed(() => {
+  const roles = AuthService.getUserRoles()
+  return roles.includes('SUPER_ADMIN')
+})
 
 function toggleLeftDrawer() {
   leftDrawerOpen.value = !leftDrawerOpen.value
 }
 
 function logout() {
-  localStorage.removeItem('authToken')
-  // Aquí podrías añadir una notificación de éxito con QNotify
+  AuthService.logout()
   router.push('/auth/login')
 }
 </script>
@@ -145,9 +201,11 @@ function logout() {
 
 /* Este es un estilo propuesto para el enlace activo del router, más sutil */
 .q-list .q-router-link--active-subtle.q-router-link--active {
-  /* Para usar una versión con opacidad de un color SCSS, se puede hacer así: */
   background-color: rgba($accent, 0.1);
   color: $accent; /* Usando la variable SCSS */
   font-weight: 500;
+  border-left: 4px solid $accent; /* Borde izquierdo para destacar */
+  border-radius: 0 8px 8px 0; /* Bordes redondeados solo a la derecha */
+  padding-left: 12px; /* Ajustar padding para compensar el borde */
 }
 </style>

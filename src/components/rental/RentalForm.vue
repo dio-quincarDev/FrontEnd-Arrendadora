@@ -22,12 +22,20 @@
           :loading="loadingVehicles"
           :disable="loadingVehicles || isEditMode"
           class="q-mb-md"
+          @update:model-value="onVehicleChange"
         >
           <template v-slot:option="scope">
             <q-item v-bind="scope.itemProps">
               <q-item-section>
                 <q-item-label>{{ scope.opt.label }}</q-item-label>
                 <q-item-label caption>{{ scope.opt.description }}</q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge
+                  :color="getVehicleTypeColor(scope.opt.type)"
+                  :label="getVehicleTypeDisplayName(scope.opt.vehicleType)"
+                  class="text-capitalize"
+                />
               </q-item-section>
             </q-item>
           </template>
@@ -59,12 +67,13 @@
         </q-select>
 
         <div class="row q-col-gutter-md q-mb-md">
-          <div class="col-12 col-sm-6">
+          <div class="col-12 col-md-6">
             <q-input
               v-model="formData.startDate"
-              label="Fecha Inicio *"
+              label="Fecha de Inicio *"
               outlined
               dense
+              readonly
               :rules="[(val) => !!val || 'Por favor, selecciona la fecha de inicio']"
             >
               <template v-slot:append>
@@ -73,27 +82,23 @@
                     <q-date
                       v-model="formData.startDate"
                       mask="YYYY-MM-DD"
-                      @update:model-value="updateEndDate"
                       color="accent"
+                      :options="disablePastDates"
+                      v-close-popup
                     />
                   </q-popup-proxy>
                 </q-icon>
               </template>
             </q-input>
           </div>
-
-          <div class="col-12 col-sm-6">
+          <div class="col-12 col-md-6">
             <q-input
               v-model="formData.endDate"
-              label="Fecha Fin *"
+              label="Fecha de Fin *"
               outlined
               dense
-              :rules="[
-                (val) => !!val || 'Por favor, selecciona la fecha de fin',
-                (val) =>
-                  isValidEndDate(val) ||
-                  'La fecha de fin debe ser posterior o igual a la de inicio',
-              ]"
+              readonly
+              :rules="[(val) => !!val || 'Por favor, selecciona la fecha de fin']"
             >
               <template v-slot:append>
                 <q-icon name="sym_o_event" class="cursor-pointer">
@@ -101,8 +106,9 @@
                     <q-date
                       v-model="formData.endDate"
                       mask="YYYY-MM-DD"
-                      :options="(date) => isValidEndDate(date)"
                       color="accent"
+                      :options="disableStartDate"
+                      v-close-popup
                     />
                   </q-popup-proxy>
                 </q-icon>
@@ -111,19 +117,110 @@
           </div>
         </div>
 
-        <q-input
-          v-model.number="formData.totalPrice"
-          label="Precio Total *"
-          type="number"
+        <div class="row q-col-gutter-md q-mb-md">
+          <div class="col-12 col-md-6">
+            <q-input
+              v-model="formData.startTime"
+              label="Hora Inicio *"
+              outlined
+              dense
+              mask="##:##"
+              :rules="[(val) => !!val || 'Por favor, selecciona la hora de inicio']"
+            >
+              <template v-slot:append>
+                <q-icon name="sym_o_access_time" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-time v-model="formData.startTime" format24h color="accent" v-close-popup />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+          <div class="col-12 col-md-6">
+            <q-input
+              v-model="formData.endTime"
+              label="Hora Fin *"
+              outlined
+              dense
+              mask="##:##"
+              :rules="[(val) => !!val || 'Por favor, selecciona la hora de fin']"
+            >
+              <template v-slot:append>
+                <q-icon name="sym_o_access_time" class="cursor-pointer">
+                  <q-popup-proxy cover transition-show="scale" transition-hide="scale">
+                    <q-time v-model="formData.endTime" format24h color="accent" v-close-popup />
+                  </q-popup-proxy>
+                </q-icon>
+              </template>
+            </q-input>
+          </div>
+        </div>
+
+        <!-- CAMPO REACTIVO DE TARIFAS -->
+        <q-select
+          v-model="formData.chosenPricingTier"
+          :options="availablePricingTiers"
+          option-value="value"
+          option-label="label"
+          label="Nivel de Precios *"
           outlined
           dense
-          min="0"
-          step="0.01"
-          prefix="$"
-          readonly
-          :rules="[(val) => val >= 0 || 'El precio debe ser cero o mayor']"
+          emit-value
+          map-options
+          :loading="loadingPricingTiers"
+          :disable="!formData.vehicleId || loadingPricingTiers"
           class="q-mb-md"
-        />
+          :rules="[(val) => !!val || 'Por favor, selecciona un nivel de precios']"
+          @update:model-value="onPricingTierChange"
+        >
+          <template v-slot:option="scope">
+            <q-item v-bind="scope.itemProps">
+              <q-item-section>
+                <q-item-label>{{ scope.opt.label }}</q-item-label>
+                <q-item-label caption class="text-positive">
+                  ${{ scope.opt.price }}/día
+                </q-item-label>
+              </q-item-section>
+              <q-item-section side>
+                <q-badge :color="getPricingTierColor(scope.opt.value)" :label="scope.opt.value" />
+              </q-item-section>
+            </q-item>
+          </template>
+
+          <template v-slot:no-option>
+            <q-item>
+              <q-item-section class="text-grey">
+                {{ formData.vehicleId ? 'Cargando tarifas...' : 'Selecciona un vehículo primero' }}
+              </q-item-section>
+            </q-item>
+          </template>
+        </q-select>
+
+        <!-- PREVIEW DE PRECIO CALCULADO -->
+        <q-card
+          v-if="selectedPricingInfo && rentalDuration"
+          class="pricing-preview q-mt-md"
+          flat
+          bordered
+        >
+          <q-card-section>
+            <div class="row items-center justify-between">
+              <div class="col">
+                <div class="text-subtitle2 text-primary">
+                  {{ selectedPricingInfo.label }}
+                </div>
+                <div class="text-caption text-grey-7">
+                  {{ selectedVehicleInfo?.label }}
+                </div>
+              </div>
+              <div class="col-auto text-right">
+                <div class="text-h6 text-positive">${{ selectedPricingInfo.price }}/día</div>
+                <div class="text-caption text-grey-7">{{ rentalDuration }} día(s)</div>
+                <div class="text-body1 text-weight-medium">Total: ${{ totalPrice }}</div>
+              </div>
+            </div>
+          </q-card-section>
+        </q-card>
       </q-card-section>
 
       <q-separator />
@@ -143,11 +240,13 @@
 </template>
 
 <script setup>
-import { ref, watch, computed, onMounted } from 'vue'
+import { ref, watch, onMounted, computed } from 'vue'
 import { useQuasar, date } from 'quasar'
 import RentalService from 'src/services/rental.service'
 import VehicleService from 'src/services/vehicle.service'
 import CustomerService from 'src/services/customer.service'
+
+import { useRentalCalculations } from 'src/composables/useRentalCalculations'
 
 const props = defineProps({
   rentalToEdit: {
@@ -158,74 +257,102 @@ const props = defineProps({
 
 const emit = defineEmits(['rental-saved', 'cancel'])
 
+const isEditMode = computed(() => !!props.rentalToEdit)
+
 const $q = useQuasar()
 const rentalFormRef = ref(null)
 const loading = ref(false)
 const loadingVehicles = ref(false)
 const loadingCustomers = ref(false)
+const loadingPricingTiers = ref(false)
 
 const formData = ref({
   vehicleId: null,
   customerId: null,
   startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
   endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
-  totalPrice: 0,
-  rentalStatus: 'ACTIVE', // Estado por defecto para nuevas rentas
+  startTime: '08:00',
+  endTime: '08:00',
+  rentalStatus: 'ACTIVE',
+  chosenPricingTier: null,
 })
+
+const disableStartDate = (d) => {
+  return d >= formData.value.startDate.replace(/-/g, '/')
+}
 
 const vehicles = ref([])
 const customers = ref([])
-const dailyRates = ref({})
+const availablePricingTiers = ref([])
 
-const isEditMode = computed(() => !!props.rentalToEdit)
+// CONFIGURACIÓN DE TARIFAS POR TIPO DE VEHÍCULO (SINCRONIZADO CON BACKEND ENUM)
+const pricingConfig = {
+  PICKUP: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 72.0 },
+    { label: 'Estándar', value: 'STANDARD', price: 80.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 92.0 },
+  ],
+  SUV: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 67.5 },
+    { label: 'Estándar', value: 'STANDARD', price: 75.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 86.25 },
+  ],
+  SEDAN: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 36.0 },
+    { label: 'Estándar', value: 'STANDARD', price: 40.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 46.0 },
+  ],
+  HATCHBACK: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 31.5 },
+    { label: 'Estándar', value: 'STANDARD', price: 35.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 40.25 },
+  ],
+  DEFAULT: [
+    { label: 'Promocional', value: 'PROMOTIONAL', price: 36.0 },
+    { label: 'Estándar', value: 'STANDARD', price: 40.0 },
+    { label: 'Premium', value: 'PREMIUM', price: 46.0 },
+  ],
+}
 
+// COMPUTED PROPERTIES
+const selectedVehicleInfo = computed(() => {
+  return vehicles.value.find((v) => v.value === formData.value.vehicleId)
+})
+
+const selectedPricingInfo = computed(() => {
+  return availablePricingTiers.value.find((p) => p.value === formData.value.chosenPricingTier)
+})
+
+const { rentalDuration, totalPrice } = useRentalCalculations(formData, selectedPricingInfo)
+
+// MÉTODOS DE CARGA
 onMounted(async () => {
   await Promise.all([loadVehicles(), loadCustomers()])
 })
-
-watch(
-  () => props.rentalToEdit,
-  (newRental) => {
-    if (newRental) {
-      formData.value = {
-        ...newRental,
-        startDate: date.formatDate(newRental.startDate, 'YYYY-MM-DD'),
-        endDate: date.formatDate(newRental.endDate, 'YYYY-MM-DD'),
-      }
-    } else {
-      formData.value = {
-        vehicleId: null,
-        customerId: null,
-        startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
-        endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
-        totalPrice: 0,
-        rentalStatus: 'ACTIVE',
-      }
-    }
-  },
-  { immediate: true },
-)
-
-watch(
-  [() => formData.value.startDate, () => formData.value.endDate, () => formData.value.vehicleId],
-  () => {
-    calculatePrice()
-  },
-  { deep: true },
-)
 
 async function loadVehicles() {
   loadingVehicles.value = true
   try {
     const res = await VehicleService.getVehicles()
     const allVehicles = Array.isArray(res) ? res : []
+    let vehiclesToDisplay = []
 
-    vehicles.value = allVehicles.map((v) => {
-      dailyRates.value[v.id] = v.dailyRate || 0
+    if (isEditMode.value && props.rentalToEdit) {
+      // En modo edición, incluir todos los vehículos para asegurar que el vehículo de la renta editada esté presente
+      vehiclesToDisplay = allVehicles
+    } else {
+      // En modo creación, solo mostrar vehículos disponibles
+      vehiclesToDisplay = allVehicles.filter((v) => v.status === 'AVAILABLE')
+    }
+
+    vehicles.value = vehiclesToDisplay.map((v) => {
+      console.log(`Vehículo ${v.id}: Tipo original -> ${v.vehicleType}`) // DEBUGGING: Usando vehicleType
       return {
         label: `${v.brand} ${v.model} (${v.year})`,
         value: v.id,
         description: `Placa: ${v.plate}`,
+        type: v.vehicleType?.toString().toUpperCase().trim() || 'DEFAULT', // Usando vehicleType
+        dailyRate: v.dailyRate, // Asegurar que dailyRate esté disponible
       }
     })
   } catch (e) {
@@ -240,20 +367,44 @@ async function loadCustomers() {
   loadingCustomers.value = true
   try {
     const customersData = await CustomerService.getCustomers()
+    const rentalsResponse = await RentalService.getRentals()
+    const allRentals = Array.isArray(rentalsResponse.data) ? rentalsResponse.data : []
+    
+
     if (Array.isArray(customersData)) {
-      customers.value = customersData.map((c) => ({
-        label: `${c.name}`,
-        value: c.id,
-        description: `Licencia: ${c.license} - Tel: ${c.phone}`,
-      }))
+      if (!isEditMode.value) {
+        // En modo creación, filtrar clientes con rentas activas
+        const activeCustomerIds = new Set(
+          allRentals
+            .filter((rental) => rental.rentalStatus === 'ACTIVE')
+            .map((rental) => rental.customerId)
+        );
+        customers.value = customersData
+          .filter((customer) => !activeCustomerIds.has(customer.id))
+          .map((c) => ({
+            label: `${c.name}`,
+            value: c.id,
+            description: `Licencia: ${c.license} - Tel: ${c.phone}`,
+          }));
+      } else {
+        // En modo edición, asegurar que el cliente de la renta actual no sea filtrado.
+        // Se filtran otros clientes con rentas activas, pero se excluye la renta actual del filtro.
+        const activeCustomerIds = new Set(
+          allRentals
+            .filter((rental) => rental.rentalStatus === 'ACTIVE' && rental.id !== props.rentalToEdit?.id)
+            .map((rental) => rental.customerId)
+        );
+        customers.value = customersData
+          .filter((customer) => !activeCustomerIds.has(customer.id))
+          .map((c) => ({
+            label: `${c.name}`,
+            value: c.id,
+            description: `Licencia: ${c.license} - Tel: ${c.phone}`,
+          }));
+      }
     } else {
       console.error('La respuesta de clientes no contiene un array válido:', customersData)
       customers.value = []
-      $q.notify({
-        type: 'negative',
-        message: 'Error: Formato de datos de clientes inesperado.',
-        position: 'top',
-      })
     }
   } catch (e) {
     console.error('Error al cargar clientes:', e)
@@ -264,31 +415,164 @@ async function loadCustomers() {
   }
 }
 
-function isValidEndDate(dateStr) {
-  return (
-    dateStr && formData.value.startDate && new Date(dateStr) >= new Date(formData.value.startDate)
-  )
-}
+// MÉTODO REACTIVO PARA CAMBIO DE VEHÍCULO
+async function onVehicleChange(vehicleId) {
+  if (!vehicleId) {
+    availablePricingTiers.value = []
+    formData.value.chosenPricingTier = null
+    return
+  }
 
-function updateEndDate() {
-  if (
-    formData.value.startDate &&
-    new Date(formData.value.endDate) < new Date(formData.value.startDate)
-  ) {
-    formData.value.endDate = date.formatDate(
-      date.addToDate(new Date(formData.value.startDate), { days: 1 }),
-      'YYYY-MM-DD',
-    )
+  if (!vehicles.value.length) {
+    console.warn('🚨 Lista de vehículos vacía al intentar seleccionar vehículo')
+    return
+  }
+
+  loadingPricingTiers.value = true
+
+  try {
+    const selectedVehicle = vehicles.value.find((v) => String(v.value) === String(vehicleId))
+    if (!selectedVehicle) {
+      console.error(`Vehículo con ID ${vehicleId} no encontrado en la lista de vehículos.`)
+      return // Añadir esta línea para salir de la función si no se encuentra el vehículo
+    }
+
+    const vehicleType = selectedVehicle.type?.toUpperCase().trim() || 'DEFAULT'
+    console.log(`DEBUG: vehicleType normalizado: '${vehicleType}'`)
+    const pricingOptions = pricingConfig[vehicleType] || pricingConfig.DEFAULT
+    console.log(`DEBUG: pricingOptions seleccionadas:`, pricingOptions)
+
+    availablePricingTiers.value = [...pricingOptions]
+
+    // Auto-seleccionar STANDARD si está disponible
+    const standardOption = availablePricingTiers.value.find((p) => p.value === 'STANDARD')
+    if (standardOption && !formData.value.chosenPricingTier) {
+      formData.value.chosenPricingTier = standardOption.value
+    }
+
+    $q.notify({
+      type: 'info',
+      message: `Tarifas para ${getVehicleTypeDisplayName(vehicleType)} cargadas correctamente`,
+      position: 'top',
+      timeout: 2000,
+    })
+  } catch (error) {
+    console.error('❌ Error al cargar tarifas:', error)
+    $q.notify({
+      type: 'negative',
+      message: 'Error al cargar las tarifas del vehículo',
+      position: 'top',
+    })
+    availablePricingTiers.value = []
+  } finally {
+    loadingPricingTiers.value = false
   }
 }
 
-function calculatePrice() {
-  const start = new Date(formData.value.startDate)
-  const end = new Date(formData.value.endDate)
-  const days = Math.ceil((end - start) / (1000 * 60 * 60 * 24)) || 1
-  const rate = dailyRates.value[formData.value.vehicleId] || 0
-  formData.value.totalPrice = parseFloat((days * rate).toFixed(2))
+function onPricingTierChange(pricingTier) {
+  if (pricingTier && selectedPricingInfo.value) {
+    $q.notify({
+      type: 'positive',
+      message: `Tarifa ${selectedPricingInfo.value.label} seleccionada: ${selectedPricingInfo.value.price}/día`,
+      position: 'top',
+      timeout: 2000,
+    })
+  }
 }
+
+// MÉTODOS DE UTILIDAD
+function getVehicleTypeColor(type) {
+  const colors = {
+    PICKUP: 'brown',
+    SUV: 'green',
+    SEDAN: 'blue',
+    HATCHBACK: 'purple',
+    DEFAULT: 'grey',
+  }
+  return colors[type] || 'grey'
+}
+
+function getVehicleTypeDisplayName(type) {
+  const displayNames = {
+    PICKUP: 'Doble Cabina',
+    SUV: 'Camioneta',
+    SEDAN: 'Sedan',
+    HATCHBACK: 'Hatchback',
+  }
+  return displayNames[type] || type // Si no se encuentra, devuelve el tipo original
+}
+
+function getPricingTierColor(tier) {
+  const colors = {
+    PROMOTIONAL: 'green',
+    STANDARD: 'blue',
+    PREMIUM: 'orange',
+  }
+  return colors[tier] || 'grey'
+}
+
+// WATCHERS
+watch(
+  () => props.rentalToEdit,
+  (newRental) => {
+    if (newRental) {
+      const parsedStartDate = date.extractDate(newRental.startDate, 'YYYY-MM-DD HH:mm:ss')
+      const parsedEndDate = date.extractDate(newRental.endDate, 'YYYY-MM-DD HH:mm:ss')
+
+      formData.value = {
+        ...newRental,
+        startDate: date.formatDate(parsedStartDate, 'YYYY-MM-DD'),
+        endDate: date.formatDate(parsedEndDate, 'YYYY-MM-DD'),
+        startTime: date.formatDate(parsedStartDate, 'HH:mm'),
+        endTime: date.formatDate(parsedEndDate, 'HH:mm'),
+        chosenPricingTier: newRental.chosenPricingTier || null,
+      }
+
+      // Cargar tarifas para el vehículo editado
+      if (newRental.vehicleId) {
+        onVehicleChange(newRental.vehicleId)
+      }
+    } else {
+      formData.value = {
+        vehicleId: null,
+        customerId: null,
+        startDate: date.formatDate(new Date(), 'YYYY-MM-DD'),
+        endDate: date.formatDate(date.addToDate(new Date(), { days: 1 }), 'YYYY-MM-DD'),
+        startTime: '08:00',
+        endTime: '08:00',
+        rentalStatus: 'ACTIVE',
+        chosenPricingTier: null,
+      }
+      availablePricingTiers.value = []
+    }
+  },
+  { immediate: true },
+)
+
+const disablePastDates = (d) => {
+  return d >= date.formatDate(new Date(), 'YYYY/MM/DD')
+}
+
+
+
+watch(
+  [vehicles, () => props.rentalToEdit],
+  ([newVehicles, newRental]) => {
+    if (newVehicles.length > 0 && isEditMode.value && newRental?.vehicleId) {
+      onVehicleChange(newRental.vehicleId)
+    }
+  },
+  { immediate: true }
+)
+
+watch(
+  () => formData.value.startDate,
+  (newDate) => {
+    if (formData.value.endDate < newDate) {
+      formData.value.endDate = newDate
+    }
+  },
+)
 
 async function submitForm() {
   const isValid = await rentalFormRef.value.validate()
@@ -297,15 +581,26 @@ async function submitForm() {
     return
   }
 
+  const fullStartDate = `${formData.value.startDate} ${formData.value.startTime}:00`
+  const fullEndDate = `${formData.value.endDate} ${formData.value.endTime}:00`
+
+  if (new Date(fullEndDate) < new Date(fullStartDate)) {
+    $q.notify({
+      type: 'negative',
+      message: 'La fecha y hora de fin debe ser posterior o igual a la de inicio.',
+    })
+    return
+  }
+
   loading.value = true
   try {
     const dataToSend = {
       vehicleId: formData.value.vehicleId,
       customerId: formData.value.customerId,
-      startDate: formData.value.startDate,
-      endDate: formData.value.endDate,
-      totalPrice: formData.value.totalPrice,
+      startDate: fullStartDate,
+      endDate: fullEndDate,
       rentalStatus: formData.value.rentalStatus,
+      chosenPricingTier: formData.value.chosenPricingTier,
     }
 
     if (isEditMode.value) {
@@ -332,5 +627,20 @@ const onCancel = () => {
 </script>
 
 <style scoped lang="scss">
-/* Tus estilos aquí */
+.pricing-preview {
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+
+  .q-card-section {
+    padding: 12px 16px;
+  }
+}
+
+.q-badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.text-capitalize {
+  text-transform: capitalize;
+}
 </style>

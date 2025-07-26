@@ -1,6 +1,6 @@
 <template>
   <q-page padding>
-    <div class="row q-col-gutter-lg">
+    <div class="row q-col-gutter-md">
       <!-- Filtros -->
       <div class="col-12">
         <metric-filter @update-filters="handleUpdateFilters" :loading="loading" />
@@ -97,60 +97,81 @@
 
       <!-- Gráficos -->
       <div class="col-12">
-        <div class="row q-col-gutter-lg">
-          <!-- Gráfico Principal Ancho -->
-          <div class="col-12">
-            <dynamic-chart-card
-              title="Tendencias de Alquiler"
-              chartType="line"
-              :chartData="formatRentalTrendsChartData(dashboardData.rentalTrends)"
-              :loading="loading"
-              noDataIcon="sym_o_trending_up"
-            />
-          </div>
+        <q-card flat class="q-pa-md">
+          <q-tabs
+            v-model="chartTab"
+            dense
+            class="text-grey"
+            active-color="primary"
+            indicator-color="primary"
+            align="justify"
+            narrow-indicator
+          >
+            <q-tab name="rentalTrends" label="Tendencias de Alquiler" />
+            <q-tab name="topCustomers" label="Top Clientes" />
+            <q-tab name="vehicleUsage" label="Uso de Vehículos" />
+            <q-tab name="customerActivity" label="Actividad de Clientes" />
+            <q-tab name="avgRentalDuration" label="Duración Promedio" />
+          </q-tabs>
 
-          <!-- Gráficos Secundarios -->
-          <div class="col-12 col-lg-6">
-            <dynamic-chart-card
-              title="Top Clientes por Alquileres"
-              chartType="bar"
-              :chartData="formatTopCustomersChartData(dashboardData.topCustomersByRentals)"
-              :loading="loading"
-              noDataIcon="sym_o_person"
-            />
-          </div>
-          <div class="col-12 col-lg-6">
-            <dynamic-chart-card
-              title="Uso de Vehículos"
-              chartType="pie"
-              :chartData="formatVehicleUsageChartData(dashboardData.vehicleUsage)"
-              :loading="loading"
-              noDataIcon="sym_o_car_rental"
-            />
-          </div>
-          <div class="col-12 col-lg-6">
-            <dynamic-chart-card
-              title="Actividad de Clientes (Alquileres vs. Ingresos)"
-              chartType="scatter"
-              :chartData="formatCustomerActivityChartData(dashboardData.customerActivity)"
-              :loading="loading"
-              noDataIcon="sym_o_groups"
-            />
-          </div>
-          <div class="col-12 col-lg-6">
-            <dynamic-chart-card
-              title="Duración Promedio por Cliente"
-              chartType="bar"
-              :chartData="
-                formatAverageRentalDurationChartData(
-                  dashboardData.averageRentalDurationByTopCustomers,
-                )
-              "
-              :loading="loading"
-              noDataIcon="sym_o_hourglass_empty"
-            />
-          </div>
-        </div>
+          <q-separator />
+
+          <q-tab-panels v-model="chartTab" animated>
+            <q-tab-panel name="rentalTrends">
+              <dynamic-chart-card
+                title="Tendencias de Alquiler"
+                chartType="line"
+                :chartData="formatRentalTrendsChartData(dashboardData.rentalTrends)"
+                :loading="loading"
+                noDataIcon="sym_o_trending_up"
+              />
+            </q-tab-panel>
+
+            <q-tab-panel name="topCustomers">
+              <dynamic-chart-card
+                title="Top Clientes por Alquileres"
+                chartType="bar"
+                :chartData="formatTopCustomersChartData(dashboardData.topCustomersByRentals)"
+                :loading="loading"
+                noDataIcon="sym_o_person"
+              />
+            </q-tab-panel>
+
+            <q-tab-panel name="vehicleUsage">
+              <dynamic-chart-card
+                title="Uso de Vehículos"
+                chartType="pie"
+                :chartData="formatVehicleUsageChartData(dashboardData.vehicleUsage)"
+                :loading="loading"
+                noDataIcon="sym_o_car_rental"
+              />
+            </q-tab-panel>
+
+            <q-tab-panel name="customerActivity">
+              <dynamic-chart-card
+                title="Actividad de Clientes (Alquileres vs. Ingresos)"
+                chartType="scatter"
+                :chartData="formatCustomerActivityChartData(dashboardData.customerActivity)"
+                :loading="loading"
+                noDataIcon="sym_o_groups"
+              />
+            </q-tab-panel>
+
+            <q-tab-panel name="avgRentalDuration">
+              <dynamic-chart-card
+                title="Duración Promedio por Cliente"
+                chartType="bar"
+                :chartData="
+                  formatAverageRentalDurationChartData(
+                    dashboardData.averageRentalDurationByTopCustomers,
+                  )
+                "
+                :loading="loading"
+                noDataIcon="sym_o_hourglass_empty"
+              />
+            </q-tab-panel>
+          </q-tab-panels>
+        </q-card>
       </div>
 
       <!-- Botón de Descarga -->
@@ -184,6 +205,8 @@ const currentFilters = ref({
   endDate: null,
   reportType: 'RENTAL_SUMMARY',
 })
+
+const chartTab = ref('rentalTrends')
 
 // --- Funciones de Normalización de Datos para Gráficos ---
 const formatTopCustomersChartData = (data) => {

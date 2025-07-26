@@ -41,8 +41,7 @@ export default {
       )
       // --- ¡¡¡CAMBIO CRÍTICO AQUÍ!!! ---
       // Ahora devolvemos el objeto 'response' completo, no solo 'response.data'
-      return response
-      // --- Fin del cambio ---
+      return response.data
     } catch (error) {
       console.error(`Error obteniendo vehículo con ID ${id}:`, error)
       throw error

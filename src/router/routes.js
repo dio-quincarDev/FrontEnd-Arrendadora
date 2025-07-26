@@ -18,7 +18,10 @@ import RentalEditPage from 'pages/rental/RentalEditPage.vue'
 import ErrorNotFound from 'pages/ErrorNotFound.vue'
 import MainLayout from 'layouts/MainLayout.vue'
 import AuthLayout from 'layouts/AuthLayout.vue'
-import AdminDashboardPage from 'pages/report/AdminDashboardPage.vue' // Mantenemos la importación
+import AdminDashboardPage from 'pages/report/AdminDashboardPage.vue'
+import UserListPage from 'pages/admin/UserListPage.vue'
+import UserCreatePage from 'pages/admin/UserCreatePage.vue'
+import UserEditPage from 'pages/admin/UserEditPage.vue' // Importar la nueva página
 
 // Subrutas para autenticación
 const authRoutes = {
@@ -66,11 +69,26 @@ export default [
       ...customerRoutes, // Agregar rutas de clientes
       ...vehicleRoutes, // Agregar ruta de vehiculos
       ...rentalRoutes, // Agregar rutas de rentas
-      // Eliminamos la ruta a ReportsPage
       {
         path: 'reports/dashboard',
         component: AdminDashboardPage,
         meta: { requiresAuth: true, roles: ['ADMIN'] },
+      },
+      {
+        path: 'admin/users',
+        component: UserListPage,
+        meta: { requiresAuth: true, roles: ['SUPER_ADMIN'] },
+      },
+      {
+        path: 'admin/users/create',
+        component: UserCreatePage,
+        meta: { requiresAuth: true, roles: ['SUPER_ADMIN'] },
+      },
+      {
+        path: 'admin/users/edit/:id',
+        component: UserEditPage,
+        props: true,
+        meta: { requiresAuth: true, roles: ['SUPER_ADMIN'] },
       },
     ],
   },

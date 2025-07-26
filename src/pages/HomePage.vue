@@ -157,7 +157,7 @@ const getIconForStatus = (status) => {
 const getColorForStatus = (status) => {
   const colors = {
     ACTIVE: 'positive',
-    COMPLETED: 'primary',
+    COMPLETED: 'info',
     PENDING: 'warning',
     CANCELLED: 'negative',
   }

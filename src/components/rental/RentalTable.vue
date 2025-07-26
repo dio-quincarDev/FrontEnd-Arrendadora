@@ -6,6 +6,20 @@
           <h2 class="text-h5 text-dark q-my-none">Gestión de Rentas</h2>
           <p class="text-grey-7 q-mb-none">Aquí puedes administrar todas tus rentas.</p>
         </div>
+        <div class="col-12 col-md-auto">
+          <q-input
+            outlined
+            dense
+            v-model="filter"
+            placeholder="Buscar renta..."
+            clearable
+            class="q-mb-md"
+          >
+            <template v-slot:append>
+              <q-icon name="sym_o_search" />
+            </template>
+          </q-input>
+        </div>
       </div>
     </q-card-section>
 
@@ -17,7 +31,99 @@
         :loading="loading"
         :pagination="pagination"
         flat
+        :grid="isMobile"
+        :hide-header="isMobile"
+        @request="onRequest"
       >
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-3 grid-item">
+            <q-card flat bordered>
+              <q-card-section class="text-center">
+                <div class="text-h6">Renta #{{ props.row.id }}</div>
+                <div class="text-subtitle2 text-grey-8">{{ props.row.customerName }}</div>
+              </q-card-section>
+              <q-separator />
+              <q-card-section class="flex flex-center">
+                <q-list dense>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_directions_car" /></q-item-section>
+                    <q-item-section
+                      >Vehículo: {{ props.row.vehicleBrand }}
+                      {{ props.row.vehicleModel }}</q-item-section
+                    >
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_attach_money" /></q-item-section>
+                    <q-item-section>Tarifa: {{ props.row.pricingTier }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_event" /></q-item-section>
+                    <q-item-section>Inicio: {{ formatDate(props.row.startDate) }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_event_busy" /></q-item-section>
+                    <q-item-section>Fin: {{ formatDate(props.row.endDate) }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_payments" /></q-item-section>
+                    <q-item-section
+                      >Total: {{ formatCurrency(props.row.totalPrice) }}</q-item-section
+                    >
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_info" /></q-item-section>
+                    <q-item-section
+                      >Estado:
+                      <q-badge :color="getStatusColor(props.row.rentalStatus)">{{
+                        props.row.rentalStatus
+                      }}</q-badge></q-item-section
+                    >
+                  </q-item>
+                </q-list>
+              </q-card-section>
+              <q-separator />
+              <q-card-actions align="right">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_info"
+                  color="info"
+                  @click="emitDetailsEvent(props.row)"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_edit"
+                  color="primary"
+                  @click="emitEditEvent(props.row)"
+                  :disable="props.row.rentalStatus === 'CANCELLED'"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_cancel"
+                  color="orange"
+                  @click="confirmCancel(props.row)"
+                  :disable="props.row.rentalStatus !== 'ACTIVE'"
+                />
+                <q-btn
+                  v-if="isAdmin"
+                  flat
+                  round
+                  dense
+                  icon="sym_o_delete"
+                  color="negative"
+                  @click="confirmDelete(props.row)"
+                  :disable="props.row.rentalStatus === 'ACTIVE'"
+                />
+              </q-card-actions>
+            </q-card>
+          </div>
+        </template>
+
         <template #body-cell-startDate="props">
           <q-td :props="props">
             {{ formatDate(props.row.startDate) }}
@@ -171,6 +277,7 @@ const showCancelDialog = ref(false)
 const showDeleteDialog = ref(false)
 const cancelRentalId = ref(null)
 const deleteRentalId = ref(null)
+const filter = ref('')
 
 const columns = [
   { name: 'customerName', label: 'Cliente', field: 'customerName', align: 'left', sortable: true },
@@ -181,8 +288,23 @@ const columns = [
     align: 'left',
     sortable: true,
   },
+  {
+    name: 'pricingTier',
+    label: 'Tarifa',
+    field: 'pricingTier',
+    align: 'left',
+    sortable: true,
+  },
   { name: 'startDate', label: 'Fecha Inicio', field: 'startDate', align: 'left', sortable: true },
   { name: 'endDate', label: 'Fecha Fin', field: 'endDate', align: 'left', sortable: true },
+  {
+    name: 'createdAt',
+    label: 'Creado',
+    field: 'createdAt',
+    align: 'left',
+    sortable: true,
+    format: (val) => formatDate(val),
+  },
   {
     name: 'totalPrice',
     label: 'Precio Total',
@@ -195,11 +317,15 @@ const columns = [
 ]
 
 const pagination = ref({
-  sortBy: 'startDate',
+  sortBy: 'createdAt',
   descending: true,
   page: 1,
   rowsPerPage: 10,
   rowsNumber: 0,
+})
+
+const isMobile = computed(() => {
+  return $q.screen.lt.md
 })
 
 const isAdmin = computed(() => {
@@ -210,7 +336,7 @@ const isAdmin = computed(() => {
   try {
     const decodedToken = jwtDecode(token)
     const userRole = decodedToken.role || ''
-    return userRole === 'ADMIN'
+    return userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
   } catch (error) {
     console.error('Error al decodificar el token:', error)
     return false
@@ -236,7 +362,7 @@ const getStatusColor = (status) => {
   const statusColors = {
     PENDING: 'negative',
     ACTIVE: 'positive',
-    COMPLETED: 'primary',
+    COMPLETED: 'info',
     CANCELLED: 'negative',
   }
   return statusColors[status] || 'grey'
@@ -256,9 +382,19 @@ async function loadRentals() {
   loading.value = true
   try {
     const response = await RentalService.getRentals()
+    console.log('Datos de rentas recibidos (sin ordenar):', response.data); // Depuración
     if (Array.isArray(response.data)) {
-      rentals.value = response.data
-      pagination.value.rowsNumber = response.data.length
+      let fetchedRentals = response.data;
+
+      // Ordenar por createdAt en orden descendente
+      fetchedRentals.sort((a, b) => {
+        const dateA = new Date(a.createdAt).getTime();
+        const dateB = new Date(b.createdAt).getTime();
+        return dateB - dateA; // Orden descendente
+      });
+
+      rentals.value = fetchedRentals;
+      pagination.value.rowsNumber = fetchedRentals.length;
     } else {
       console.error('Error: La respuesta de getRentals no es un array:', response.data)
       rentals.value = []
@@ -337,6 +473,56 @@ async function confirmDeleteAction() {
     showDeleteDialog.value = false
     processing.value = false
   }
+}
+
+function onRequest(props) {
+  const { page, rowsPerPage, sortBy, descending } = props.pagination;
+
+  loading.value = true;
+
+  // Obtener los datos originales (sin filtrar ni ordenar)
+  // Esto asume que loadRentals ya ha cargado todos los datos en rentals.value
+  let data = [...rentals.value];
+
+  // Aplicar filtrado
+  if (filter.value) {
+    const lowerCaseFilter = filter.value.toLowerCase();
+    data = data.filter(rental => 
+      rental.customerName.toLowerCase().includes(lowerCaseFilter) ||
+      rental.vehicleBrand.toLowerCase().includes(lowerCaseFilter) ||
+      rental.vehicleModel.toLowerCase().includes(lowerCaseFilter) ||
+      rental.pricingTier.toLowerCase().includes(lowerCaseFilter)
+    );
+  }
+
+  // Aplicar ordenación
+  if (sortBy) {
+    data.sort((a, b) => {
+      const x = descending ? b : a;
+      const y = descending ? a : b;
+      
+      // Manejar la comparación de fechas si sortBy es 'createdAt'
+      if (sortBy === 'createdAt') {
+        return new Date(x[sortBy]).getTime() - new Date(y[sortBy]).getTime();
+      }
+      // Comparación general para otros tipos de datos
+      if (typeof x[sortBy] === 'string') {
+        return x[sortBy].localeCompare(y[sortBy]);
+      }
+      return x[sortBy] - y[sortBy];
+    });
+  }
+
+  // Actualizar la paginación (para que q-table sepa el estado actual)
+  pagination.value.sortBy = sortBy;
+  pagination.value.descending = descending;
+  pagination.value.page = page;
+  pagination.value.rowsPerPage = rowsPerPage;
+
+  // Asignar los datos ordenados y filtrados a la propiedad reactiva
+  rentals.value = data;
+
+  loading.value = false;
 }
 
 defineExpose({ refresh })

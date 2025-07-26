@@ -6,11 +6,101 @@
           <h2 class="text-h5 text-dark q-my-none">Gestión de Clientes</h2>
           <p class="text-grey-7 q-mb-none">Aquí puedes administrar todos tus clientes.</p>
         </div>
+        <div class="col-12 col-md-auto">
+          <q-input
+            outlined
+            dense
+            v-model="filter"
+            placeholder="Buscar cliente..."
+            clearable
+            class="q-mb-md"
+          >
+            <template v-slot:append>
+              <q-icon name="sym_o_search" />
+            </template>
+          </q-input>
+        </div>
       </div>
     </q-card-section>
 
     <q-card-section class="q-pa-none">
-      <q-table :rows="customers" :columns="columns" row-key="id" :loading="loading" flat>
+      <q-table
+        :rows="filteredCustomers"
+        :columns="columns"
+        row-key="id"
+        :loading="loading"
+        flat
+        :grid="isMobile"
+        :hide-header="isMobile"
+      >
+        <template v-slot:item="props">
+          <div class="q-pa-xs col-xs-12 col-sm-6 col-md-4 col-lg-3 grid-item">
+            <q-card flat bordered>
+              <q-card-section class="text-center">
+                <div class="text-h6">{{ props.row.name }}</div>
+                <div class="text-subtitle2 text-grey-8">{{ props.row.email }}</div>
+              </q-card-section>
+              <q-separator />
+              <q-card-section class="flex flex-center">
+                <q-list dense>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_badge" /></q-item-section>
+                    <q-item-section>Identificación: {{ props.row.license }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_phone" /></q-item-section>
+                    <q-item-section>Teléfono: {{ props.row.phone }}</q-item-section>
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_verified_user" /></q-item-section>
+                    <q-item-section
+                      >Estado:
+                      {{
+                        props.row.customerStatus === 'ACTIVE' ? 'Activo' : 'Inactivo'
+                      }}</q-item-section
+                    >
+                  </q-item>
+                  <q-item>
+                    <q-item-section avatar><q-icon name="sym_o_event" /></q-item-section>
+                    <q-item-section
+                      >Creado:
+                      {{ formatDate(props.row.createdAt) }}
+                    </q-item-section>
+                  </q-item>
+                </q-list>
+              </q-card-section>
+              <q-separator />
+              <q-card-actions align="right">
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_info"
+                  color="info"
+                  @click="emitDetailsEvent(props.row)"
+                />
+                <q-btn
+                  flat
+                  round
+                  dense
+                  icon="sym_o_edit"
+                  color="primary"
+                  @click="emitEditEvent(props.row)"
+                />
+                <q-btn
+                  v-if="isAdmin"
+                  flat
+                  round
+                  dense
+                  icon="sym_o_delete"
+                  color="negative"
+                  @click="confirmDelete(props.row)"
+                />
+              </q-card-actions>
+            </q-card>
+          </div>
+        </template>
+
         <template v-slot:body-cell-actions="props">
           <q-td :props="props">
             <q-btn-dropdown flat round dense dropdown-icon="sym_o_more_vert" no-icon-animation>
@@ -35,12 +125,7 @@
 
                 <q-separator v-if="isAdmin" />
 
-                <q-item
-                  v-if="isAdmin"
-                  clickable
-                  v-close-popup
-                  @click="confirmDelete(props.row)"
-                >
+                <q-item v-if="isAdmin" clickable v-close-popup @click="confirmDelete(props.row)">
                   <q-item-section avatar>
                     <q-icon name="sym_o_delete" color="negative" />
                   </q-item-section>
@@ -51,16 +136,6 @@
               </q-list>
             </q-btn-dropdown>
           </q-td>
-        </template>
-
-        <template v-slot:no-data="{ filter }">
-          <div class="full-width row flex-center text-accent q-gutter-sm q-pa-lg">
-            <q-icon size="2em" name="sym_o_sentiment_dissatisfied" />
-            <span>
-              No hay clientes disponibles.
-              <span v-if="filter"> para la búsqueda "{{ filter }}"</span>
-            </span>
-          </div>
         </template>
       </q-table>
     </q-card-section>
@@ -105,6 +180,7 @@ export default {
   data() {
     return {
       customers: [],
+      filter: '',
       columns: [
         {
           name: 'name',
@@ -144,16 +220,25 @@ export default {
       loading: false,
       showDialog: false,
       customerToDelete: null,
-      pagination: {
-        sortBy: 'name',
-        descending: false,
-        page: 1,
-        rowsPerPage: 10,
-        rowsNumber: 0,
-      },
     }
   },
   computed: {
+    isMobile() {
+      return this.$q.screen.lt.md
+    },
+    filteredCustomers() {
+      if (!this.filter) {
+        return this.customers
+      }
+      const lowerCaseFilter = this.filter.toLowerCase()
+      return this.customers.filter(
+        (customer) =>
+          customer.name.toLowerCase().includes(lowerCaseFilter) ||
+          customer.email.toLowerCase().includes(lowerCaseFilter) ||
+          customer.license.toLowerCase().includes(lowerCaseFilter) ||
+          customer.phone.toLowerCase().includes(lowerCaseFilter),
+      )
+    },
     isAdmin() {
       const token = localStorage.getItem('authToken')
       if (!token) {
@@ -162,7 +247,7 @@ export default {
       try {
         const decodedToken = jwtDecode(token)
         const userRole = decodedToken.role || ''
-        return userRole === 'ADMIN'
+        return userRole === 'ADMIN' || userRole === 'SUPER_ADMIN'
       } catch (error) {
         console.error('Error al decodificar el token:', error)
         return false
@@ -180,7 +265,7 @@ export default {
       this.loading = true
       try {
         this.customers = await CustomerService.getCustomers()
-        this.pagination.rowsNumber = this.customers.length
+        console.log('Datos de clientes recibidos:', this.customers) // Depuración
       } catch (error) {
         console.error('Error al cargar los clientes:', error)
         this.$q.notify({ type: 'negative', message: 'Error al cargar los clientes' })
@@ -188,6 +273,7 @@ export default {
         this.loading = false
       }
     },
+
     emitEditEvent(customer) {
       this.$emit('edit-customer', customer)
     },
@@ -197,6 +283,9 @@ export default {
     confirmDelete(customer) {
       this.customerToDelete = customer
       this.showDialog = true
+    },
+    formatDate(value) {
+      return date.formatDate(value, 'DD/MM/YYYY')
     },
     async deleteCustomer() {
       this.loading = true
@@ -213,10 +302,6 @@ export default {
         this.loading = false
         this.customerToDelete = null
       }
-    },
-    onRequest(props) {
-      this.pagination = props.pagination
-      this.loadCustomers()
     },
   },
 }
