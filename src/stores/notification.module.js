@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia';
+import { Notify } from 'quasar';
 
 export const useNotificationStore = defineStore('notification', {
   state: () => ({
@@ -9,11 +10,26 @@ export const useNotificationStore = defineStore('notification', {
   },
   actions: {
     addNotification(message) {
-      this.notifications.push({
-        id: Date.now(), // Simple unique ID
+      // 1. Añadir a la lista de estado (al principio)
+      this.notifications.unshift({
+        id: Date.now(),
         message: message,
         read: false,
         timestamp: new Date().toLocaleString(),
+      });
+
+      // 2. Reproducir sonido
+      const audio = new Audio('/notification.mp3');
+      audio.play().catch(error => {
+        console.error('Error al reproducir el sonido de notificación:', error);
+      });
+
+      // 3. Mostrar notificación emergente
+      Notify.create({
+        message: message,
+        color: 'info',
+        position: 'top',
+        timeout: 3000,
       });
     },
     markAsRead(id) {

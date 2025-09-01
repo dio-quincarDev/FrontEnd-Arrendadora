@@ -19,14 +19,8 @@ export default boot(({ app }) => {
     client.subscribe('/topic/rental-alerts', message => {
       console.log('Mensaje recibido: ' + message.body);
       const notificationStore = useNotificationStore();
+      // La tienda ahora se encarga de todo (añadir a la lista, sonido, pop-up)
       notificationStore.addNotification(message.body);
-
-      app.config.globalProperties.$q.notify({
-        message: message.body,
-        color: 'info',
-        position: 'top',
-        timeout: 3000
-      });
     });
   };
 
