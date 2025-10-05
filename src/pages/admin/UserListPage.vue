@@ -18,7 +18,7 @@
             <q-icon name="sym_o_search" />
           </template>
         </q-input>
-        <q-btn color="accent" label="Crear Usuario" @click="goToCreateUser" />
+        <q-btn color="accent" label="Crear Usuario" @click="goToCreateUser" v-if="!isSuperAdmin" />
       </q-card-section>
 
       <q-card-section class="q-pa-none q-px-md-lg">
@@ -177,12 +177,19 @@ const currentUserId = AuthService.getCurrentUserId()
 
 const search = ref('') // Nuevo ref para el término de búsqueda
 
+const currentUserRoles = AuthService.getUserRoles()
+const isSuperAdmin = computed(() => currentUserRoles.includes('SUPER_ADMIN'))
+
 const filteredUsers = computed(() => {
+  let users = userStore.users
+  // Excluir al SUPER_ADMIN de la lista si es el usuario actual
+  users = users.filter(user => user.role !== 'SUPER_ADMIN')
+
   if (!search.value) {
-    return userStore.users
+    return users
   }
   const searchTerm = search.value.toLowerCase()
-  return userStore.users.filter(
+  return users.filter(
     (user) =>
       user.username.toLowerCase().includes(searchTerm) ||
       user.email.toLowerCase().includes(searchTerm),

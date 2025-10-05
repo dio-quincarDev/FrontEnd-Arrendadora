@@ -44,9 +44,9 @@ const formattedValue = computed(() => {
     ) {
       return 'N/A' // Mostrar "N/A" para valores no válidos
     }
-    return new Intl.NumberFormat('es-PA', {
+    return new Intl.NumberFormat('en-US', {
       style: 'currency',
-      currency: 'PAB',
+      currency: 'USD',
       minimumFractionDigits: 0,
       maximumFractionDigits: 2,
     }).format(numericValue)
@@ -105,4 +105,3 @@ const formattedValue = computed(() => {
   }
 }
 </style>
-

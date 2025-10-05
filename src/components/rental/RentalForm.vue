@@ -594,6 +594,10 @@ async function submitForm() {
 
   loading.value = true
   try {
+    // Obtener el nombre del cliente seleccionado
+    const selectedCustomer = customers.value.find(c => c.value === formData.value.customerId);
+    const customerName = selectedCustomer ? selectedCustomer.label : '';
+
     const dataToSend = {
       vehicleId: formData.value.vehicleId,
       customerId: formData.value.customerId,
@@ -601,13 +605,19 @@ async function submitForm() {
       endDate: fullEndDate,
       rentalStatus: formData.value.rentalStatus,
       chosenPricingTier: formData.value.chosenPricingTier,
+      customerName: customerName, // Añadir el nombre del cliente
     }
 
     if (isEditMode.value) {
       await RentalService.updateRental(props.rentalToEdit.id, dataToSend)
       $q.notify({ type: 'positive', message: 'Renta actualizada correctamente' })
     } else {
-      await RentalService.createRental(dataToSend)
+      // Para la creación, enviar un ID temporal y el nombre del cliente
+      const createData = {
+        ...dataToSend,
+        id: 0, // ID temporal para cumplir con la validación del backend
+      };
+      await RentalService.createRental(createData)
       $q.notify({ type: 'positive', message: 'Renta creada correctamente' })
     }
 
