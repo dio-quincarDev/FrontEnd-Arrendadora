@@ -4,7 +4,7 @@ import axios from 'axios'
 
 // Constantes para rutas de la API
 const API_CONSTANTS = {
-  BASE_URL: 'http://localhost:8080', // URL base del backend
+  BASE_URL: import.meta.env.VITE_API_BASE_URL, // URL base del backend
   V1_ROUTE: '/v1',
   AUTH_ROUTE: '/auth',
   CUSTOMERS_ROUTE: '/customers',
