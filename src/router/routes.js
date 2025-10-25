@@ -22,6 +22,8 @@ import AdminDashboardPage from 'pages/report/AdminDashboardPage.vue'
 import UserListPage from 'pages/admin/UserListPage.vue'
 import UserCreatePage from 'pages/admin/UserCreatePage.vue'
 import UserEditPage from 'pages/admin/UserEditPage.vue' // Importar la nueva página
+import PresentationLayout from 'layouts/PresentationLayout.vue' // Importar layout de presentación
+import PresentationPage from 'pages/PresentationPage.vue' // Importar página de presentación
 
 // Subrutas para autenticación
 const authRoutes = {
@@ -62,6 +64,11 @@ export default [
   authRoutes,
   {
     path: '/',
+    component: PresentationLayout,
+    children: [{ path: '', component: PresentationPage }],
+  },
+  {
+    path: '/dashboard',
     component: MainLayout,
     meta: { requiresAuth: true },
     children: [

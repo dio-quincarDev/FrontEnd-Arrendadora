@@ -25,6 +25,6 @@ import { useRouter } from 'vue-router'
 const router = useRouter()
 
 const handleLoginSuccess = () => {
-  router.push('/') // Redirigir a la página principal después del inicio de sesión
+  router.push('/dashboard') // Redirigir al dashboard después del inicio de sesión
 }
 </script>

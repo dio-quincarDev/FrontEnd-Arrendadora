@@ -65,7 +65,7 @@
       <q-list>
         <q-item-label header class="menu-header"> Menú Principal </q-item-label>
 
-        <q-item to="/" clickable v-ripple :exact="true" class="q-router-link--active-subtle">
+        <q-item to="/dashboard" clickable v-ripple :exact="true" class="q-router-link--active-subtle">
           <q-item-section avatar><q-icon name="sym_o_home" /></q-item-section>
           <q-item-section>Inicio</q-item-section>
         </q-item>
