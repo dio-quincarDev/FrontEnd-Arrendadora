@@ -41,6 +41,7 @@ export default defineComponent({
   letter-spacing: -1px;
   background: -webkit-linear-gradient(45deg, #e0e0e0, #ffffff);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
