@@ -70,7 +70,7 @@
           <q-item-section>Inicio</q-item-section>
         </q-item>
         <q-item
-          to="/reports/dashboard"
+          to="/dashboard/reports/dashboard"
           clickable
           v-ripple
           :exact="true"
@@ -85,7 +85,7 @@
         <q-item-label header class="menu-header"> Gestión </q-item-label>
 
         <q-item
-          to="/rentals"
+          to="/dashboard/rentals"
           clickable
           v-ripple
           :exact="false"
@@ -96,7 +96,7 @@
         </q-item>
 
         <q-item
-          to="/vehicles"
+          to="/dashboard/vehicles"
           clickable
           v-ripple
           :exact="false"
@@ -107,7 +107,7 @@
         </q-item>
 
         <q-item
-          to="/customers"
+          to="/dashboard/customers"
           clickable
           v-ripple
           :exact="false"
@@ -120,7 +120,7 @@
         <!-- Nuevo elemento de menú para Gestión de Usuarios -->
         <q-item
           v-if="isSuperAdmin"
-          to="/admin/users"
+          to="/dashboard/admin/users"
           clickable
           v-ripple
           :exact="false"
