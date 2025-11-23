@@ -9,12 +9,12 @@ export default boot(({ app }) => {
   if (baseUrl && baseUrl.startsWith('http')) {
     // Production: Full URL from .env, convert http/https to ws/wss
     const wsUrl = baseUrl.replace(/^http/, 'ws')
-    brokerURL = `${wsUrl}/admin-alerts`
+    brokerURL = `${wsUrl}/v1/admin-alerts`
   } else {
     // Development: Relative path from .env or undefined, use browser location
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
     const host = window.location.host
-    brokerURL = `${protocol}//${host}/admin-alerts`
+    brokerURL = `${protocol}//${host}/v1/admin-alerts`
   }
 
   console.log(`[WebSocket] Intentando conectar a: ${brokerURL}`)

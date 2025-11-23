@@ -107,22 +107,22 @@ const quickActions = ref([
   {
     label: 'Crear Renta',
     icon: 'sym_o_add_circle',
-    to: '/rentals/create',
+    to: '/dashboard/rentals/create',
   },
   {
     label: 'Gestionar Vehículos',
     icon: 'sym_o_directions_car',
-    to: '/vehicles',
+    to: '/dashboard/vehicles',
   },
   {
     label: 'Gestionar Clientes',
     icon: 'sym_o_groups',
-    to: '/customers',
+    to: '/dashboard/customers',
   },
   {
     label: 'Ver Dashboard',
     icon: 'sym_o_analytics',
-    to: '/reports/dashboard',
+    to: '/dashboard/reports/dashboard',
   },
 ])
 
